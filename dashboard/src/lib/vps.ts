@@ -1,0 +1,47 @@
+const VPS_URL = process.env.VPS_URL || "http://localhost:3001";
+const VPS_SECRET = process.env.VPS_SECRET || "";
+
+async function vpsFetch(path: string, options: RequestInit = {}) {
+  const res = await fetch(`${VPS_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-vps-secret": VPS_SECRET,
+      ...options.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`VPS error ${res.status}: ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function startWhatsappSession(businessId: string) {
+  return vpsFetch(`/api/sessions/${businessId}/start`, { method: "POST" });
+}
+
+export async function stopWhatsappSession(businessId: string) {
+  return vpsFetch(`/api/sessions/${businessId}/stop`, { method: "POST" });
+}
+
+export async function getWhatsappStatus(businessId: string) {
+  return vpsFetch(`/api/sessions/${businessId}/status`);
+}
+
+export async function getWhatsappQr(businessId: string) {
+  return vpsFetch(`/api/sessions/${businessId}/qr`);
+}
+
+export async function sendWhatsappMessage(
+  businessId: string,
+  customerPhone: string,
+  body: string
+) {
+  return vpsFetch("/api/messages/send", {
+    method: "POST",
+    body: JSON.stringify({ businessId, customerPhone, body }),
+  });
+}
