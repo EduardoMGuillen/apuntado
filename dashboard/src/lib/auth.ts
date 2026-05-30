@@ -16,19 +16,26 @@ function buildAuthOptions(): NextAuthOptions {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        const email = credentials.email.trim().toLowerCase();
 
-        if (!user?.passwordHash) return null;
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email },
+          });
 
-        const valid = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-        if (!valid) return null;
+          if (!user?.passwordHash) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+          const valid = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+          if (!valid) return null;
+
+          return { id: user.id, email: user.email, name: user.name };
+        } catch (err) {
+          console.error("[auth] credentials authorize failed:", err);
+          return null;
+        }
       },
     }),
   ];
@@ -69,11 +76,6 @@ function buildAuthOptions(): NextAuthOptions {
   };
 }
 
-let cachedAuthOptions: NextAuthOptions | undefined;
-
 export function getAuthOptions(): NextAuthOptions {
-  if (!cachedAuthOptions) {
-    cachedAuthOptions = buildAuthOptions();
-  }
-  return cachedAuthOptions;
+  return buildAuthOptions();
 }

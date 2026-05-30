@@ -3,37 +3,59 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    try {
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
 
-    if (result?.error) {
-      setError("Email o contraseña incorrectos");
+      if (!result) {
+        setError("No se pudo conectar con el servidor. Revisá tu conexión.");
+        return;
+      }
+
+      if (result.error) {
+        setError(
+          result.error === "CredentialsSignin"
+            ? "Email o contraseña incorrectos"
+            : "No se pudo iniciar sesión. Intentá de nuevo."
+        );
+        return;
+      }
+
+      if (!result.ok) {
+        setError("No se pudo iniciar sesión. Intentá de nuevo.");
+        return;
+      }
+
+      // Redirección completa para que la cookie de sesión se aplique antes del middleware
+      window.location.assign("/app");
+    } catch {
+      setError(
+        "Error de conexión. Si estás en producción, verificá que DATABASE_URL y NEXTAUTH_URL estén configurados."
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    router.push("/app");
   }
 
   return (
@@ -54,31 +76,38 @@ export default function LoginPage() {
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
+            name="email"
             type="email"
+            autoComplete="email"
             className="h-11"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            disabled={loading}
           />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
-            className="h-11"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            disabled={loading}
           />
         </div>
-        <Button
+        <button
           type="submit"
-          className="h-11 w-full rounded-full font-semibold"
           disabled={loading}
+          className={cn(
+            buttonVariants(),
+            "h-11 w-full rounded-full font-semibold"
+          )}
         >
           {loading ? "Ingresando..." : "Iniciar sesión"}
-        </Button>
+        </button>
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
@@ -91,6 +120,7 @@ export default function LoginPage() {
           type="button"
           variant="outline"
           className="h-11 w-full rounded-full"
+          disabled={loading}
           onClick={() => signIn("google", { callbackUrl: "/app" })}
         >
           Continuar con Google

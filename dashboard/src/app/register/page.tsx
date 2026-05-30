@@ -3,50 +3,59 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/auth-layout";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Error al registrar");
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Error al registrar");
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+      });
+
+      if (!result?.ok) {
+        setError("Cuenta creada. Iniciá sesión en el login.");
+        return;
+      }
+
+      window.location.assign("/bienvenida");
+    } catch {
+      setError("Error de conexión. Intentá de nuevo.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      router.push("/login");
-      return;
-    }
-
-    router.push("/onboarding");
   }
 
   return (
@@ -86,24 +95,28 @@ export default function RegisterPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Contraseña</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
-            className="h-11"
+            name="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={8}
             required
+            disabled={loading}
           />
           <p className="text-xs text-muted-foreground">Mínimo 8 caracteres</p>
         </div>
-        <Button
+        <button
           type="submit"
-          className="h-11 w-full rounded-full bg-accent font-semibold text-accent-foreground hover:bg-accent/90"
           disabled={loading}
+          className={cn(
+            buttonVariants(),
+            "h-11 w-full rounded-full bg-accent font-semibold text-accent-foreground hover:bg-accent/90"
+          )}
         >
           {loading ? "Creando cuenta..." : "Empezar prueba gratis"}
-        </Button>
+        </button>
         <p className="text-center text-sm text-muted-foreground">
           ¿Ya tenés cuenta?{" "}
           <Link href="/login" className="font-medium text-primary hover:underline">

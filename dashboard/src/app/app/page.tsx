@@ -12,6 +12,15 @@ export default async function AppRootPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  if (!business) redirect("/onboarding");
+  if (!business) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { createdAt: true },
+    });
+    const isNewAccount =
+      user &&
+      Date.now() - user.createdAt.getTime() < 15 * 60 * 1000;
+    redirect(isNewAccount ? "/bienvenida" : "/onboarding");
+  }
   redirect(`/app/${business.id}`);
 }
