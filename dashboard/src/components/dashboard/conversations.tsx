@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
-import { Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw } from "lucide-react";
 import {
   formatCustomerLabel,
   formatCustomerSubtitle,
@@ -202,13 +202,14 @@ export function ConversationsClient({ business, customers: initial }: Props) {
 
   return (
     <DashboardShell business={business}>
-      <div className="flex h-[calc(100vh-8rem)] flex-col">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Conversaciones</h1>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+          <h1 className="text-xl font-bold md:text-2xl">Conversaciones</h1>
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="shrink-0"
             onClick={refreshConversations}
             disabled={refreshing}
           >
@@ -217,12 +218,18 @@ export function ConversationsClient({ business, customers: initial }: Props) {
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
-            <span className="ml-2">Refrescar</span>
+            <span className="ml-2 hidden sm:inline">Refrescar</span>
           </Button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden rounded-xl border">
-          <div className="w-72 overflow-y-auto border-r">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border md:min-h-[calc(100dvh-11rem)] md:flex-row">
+          <div
+            className={cn(
+              "flex w-full shrink-0 flex-col overflow-y-auto border-border bg-background md:w-72 md:border-r",
+              "max-md:absolute max-md:inset-0 max-md:z-10",
+              selected && "max-md:hidden"
+            )}
+          >
             {customers.length === 0 ? (
               <p className="p-4 text-sm text-muted-foreground">
                 Aún no hay conversaciones
@@ -253,12 +260,28 @@ export function ConversationsClient({ business, customers: initial }: Props) {
             )}
           </div>
 
-          <div className="flex flex-1 flex-col">
+          <div
+            className={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col bg-background",
+              !selected && "max-md:hidden"
+            )}
+          >
             {selectedCustomer ? (
               <>
-                <div className="flex items-center justify-between border-b p-4">
-                  <div>
-                    <p className="font-medium">
+                <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-start sm:justify-between md:p-4">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 md:hidden"
+                      aria-label="Volver a la lista"
+                      onClick={() => setSelected(null)}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div className="min-w-0">
+                    <p className="font-medium truncate">
                       {formatCustomerLabel(
                         selectedCustomer.whatsappPhone,
                         selectedCustomer.name
@@ -268,25 +291,31 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                       {formatCustomerSubtitle(selectedCustomer.whatsappPhone)}
                     </p>
                     <div className="mt-1">{statusBadge(selectedCustomer)}</div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2 pl-11 sm:pl-0">
                     {selectedCustomer.manualTakeover ? (
                       <Button
                         size="sm"
                         variant="outline"
+                        className="flex-1 sm:flex-none"
                         onClick={() => toggleTakeover(false)}
                       >
                         Devolver al bot
                       </Button>
                     ) : (
-                      <Button size="sm" onClick={() => toggleTakeover(true)}>
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none"
+                        onClick={() => toggleTakeover(true)}
+                      >
                         Tomar control
                       </Button>
                     )}
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3 md:p-4">
                   {messages.map((m, i) => (
                     <div
                       key={i}
@@ -312,7 +341,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                 </div>
 
                 {selectedCustomer.manualTakeover && (
-                  <div className="flex flex-col gap-2 border-t p-4">
+                  <div className="shrink-0 flex flex-col gap-2 border-t bg-background p-3 md:p-4">
                     {sendError && (
                       <p className="text-sm text-destructive">{sendError}</p>
                     )}
@@ -331,7 +360,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                 )}
               </>
             ) : (
-              <div className="flex flex-1 items-center justify-center text-muted-foreground">
+              <div className="hidden flex-1 items-center justify-center text-muted-foreground md:flex">
                 Seleccioná una conversación
               </div>
             )}
