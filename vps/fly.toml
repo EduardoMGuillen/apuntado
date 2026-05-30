@@ -3,7 +3,7 @@
 # Docs: https://fly.io/docs
 
 app = "apuntado-vps"
-primary_region = "mia"
+primary_region = "dfw"
 
 [build]
 
