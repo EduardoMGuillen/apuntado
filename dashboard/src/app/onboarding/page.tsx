@@ -5,22 +5,10 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const BUSINESS_TYPES = [
-  { value: "salon", label: "Salón de belleza" },
-  { value: "barbershop", label: "Barbería" },
-  { value: "clinic", label: "Clínica" },
-  { value: "dentist", label: "Dentista" },
-  { value: "mechanic", label: "Mecánica" },
-];
+import { OnboardingStepper } from "@/components/onboarding/stepper";
+import { BUSINESS_TYPE_CATEGORIES, getBusinessTypeLabel } from "@/lib/business-types";
+import { cn } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 const DEFAULT_SCHEDULE = [
   { dayOfWeek: 0, openTime: "08:00", closeTime: "12:00", isOpen: false },
@@ -33,6 +21,9 @@ const DEFAULT_SCHEDULE = [
 ];
 
 const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+const selectClass =
+  "flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
@@ -54,12 +45,14 @@ export default function OnboardingPage() {
 
   const [schedules] = useState(DEFAULT_SCHEDULE);
 
+  const canContinueStep0 = name.trim().length >= 2 && phone.length >= 8 && city.trim().length >= 2;
+
   function addService() {
     if (!serviceName.trim()) return;
     setServices([
       ...services,
       {
-        name: serviceName,
+        name: serviceName.trim(),
         durationMin: serviceDuration,
         priceHNL: servicePrice,
       },
@@ -69,9 +62,14 @@ export default function OnboardingPage() {
     setServicePrice(150);
   }
 
+  function removeService(index: number) {
+    setServices(services.filter((_, i) => i !== index));
+  }
+
   async function handleFinish() {
     if (services.length === 0) {
       setError("Agregá al menos un servicio");
+      setStep(1);
       return;
     }
 
@@ -118,190 +116,312 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4">
-      <div className="mx-auto max-w-lg pt-8">
-        <div className="mb-8 flex justify-center">
-          <Logo size={40} />
+    <div className="min-h-screen mesh-light">
+      <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 py-6 sm:max-w-2xl sm:px-6 sm:py-10">
+        <div className="mb-6 flex justify-center sm:mb-8">
+          <Logo size={36} />
         </div>
 
-        <Tabs value={String(step)} onValueChange={(v) => setStep(Number(v))}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="0">Negocio</TabsTrigger>
-            <TabsTrigger value="1">Servicios</TabsTrigger>
-            <TabsTrigger value="2">Confirmar</TabsTrigger>
-          </TabsList>
+        <OnboardingStepper current={step} />
 
-          <TabsContent value="0">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tu negocio</CardTitle>
-                <CardDescription>Contanos sobre tu negocio</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <div className="glass-card flex-1 rounded-2xl p-5 sm:p-8">
+          {step === 0 && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">
+                  Tu negocio
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Contanos sobre tu negocio para configurar el bot
+                </p>
+              </div>
+
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Nombre del negocio</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} />
+                  <Label htmlFor="business-name">Nombre del negocio</Label>
+                  <Input
+                    id="business-name"
+                    className="h-11"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ej. Barbería El Centro"
+                  />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Tipo</Label>
+                  <Label htmlFor="business-type">Tipo de negocio</Label>
                   <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    id="business-type"
+                    className={selectClass}
                     value={type}
                     onChange={(e) => setType(e.target.value)}
                   >
-                    {BUSINESS_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
+                    {BUSINESS_TYPE_CATEGORIES.map((category) => (
+                      <optgroup key={category.label} label={category.label}>
+                        {category.types.map((t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>WhatsApp del negocio</Label>
+                  <Label htmlFor="business-phone">WhatsApp del negocio</Label>
                   <Input
+                    id="business-phone"
+                    className="h-11"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+5049XXXXXXX"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Formato Honduras: +504 seguido de 8 dígitos
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Ciudad</Label>
-                  <Input value={city} onChange={(e) => setCity(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Dirección (opcional)</Label>
-                  <Input
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={() => setStep(1)}
-                  disabled={!name || !phone || !city}
-                >
-                  Siguiente
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Servicios</CardTitle>
-                <CardDescription>¿Qué servicios ofrecés?</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-3 space-y-2">
-                    <Label>Nombre</Label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="business-city">Ciudad</Label>
                     <Input
-                      value={serviceName}
-                      onChange={(e) => setServiceName(e.target.value)}
-                      placeholder="Corte de cabello"
+                      id="business-city"
+                      className="h-11"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Tegucigalpa"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Minutos</Label>
+                    <Label htmlFor="business-address">Dirección (opcional)</Label>
                     <Input
-                      type="number"
-                      value={serviceDuration}
-                      onChange={(e) => setServiceDuration(Number(e.target.value))}
+                      id="business-address"
+                      className="h-11"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Colonia, calle..."
                     />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Precio (L.)</Label>
+                </div>
+              </div>
+
+              <Button
+                className="h-11 w-full rounded-full font-semibold"
+                onClick={() => setStep(1)}
+                disabled={!canContinueStep0}
+              >
+                Siguiente
+              </Button>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">
+                  Servicios
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  ¿Qué servicios ofrecés? Agregá al menos uno.
+                </p>
+              </div>
+
+              <div className="space-y-4 rounded-xl border border-border/80 bg-muted/30 p-4">
+                <div className="space-y-2">
+                  <Label htmlFor="service-name">Nombre del servicio</Label>
+                  <Input
+                    id="service-name"
+                    className="h-11 bg-background"
+                    value={serviceName}
+                    onChange={(e) => setServiceName(e.target.value)}
+                    placeholder="Corte de cabello"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addService();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="service-duration">Duración (min)</Label>
                     <Input
+                      id="service-duration"
                       type="number"
+                      min={15}
+                      className="h-11 bg-background"
+                      value={serviceDuration}
+                      onChange={(e) =>
+                        setServiceDuration(Number(e.target.value))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="service-price">Precio (L.)</Label>
+                    <Input
+                      id="service-price"
+                      type="number"
+                      min={0}
+                      className="h-11 bg-background"
                       value={servicePrice}
                       onChange={(e) => setServicePrice(Number(e.target.value))}
                     />
                   </div>
                 </div>
-                <Button variant="outline" onClick={addService} className="w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full rounded-full"
+                  onClick={addService}
+                  disabled={!serviceName.trim()}
+                >
                   Agregar servicio
                 </Button>
+              </div>
 
-                {services.length > 0 && (
-                  <ul className="space-y-2 rounded-md border p-3">
-                    {services.map((s, i) => (
-                      <li key={i} className="flex justify-between text-sm">
-                        <span>{s.name}</span>
-                        <span className="text-muted-foreground">
+              {services.length > 0 && (
+                <ul className="divide-y rounded-xl border border-border/80 bg-background">
+                  {services.map((s, i) => (
+                    <li
+                      key={`${s.name}-${i}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{s.name}</p>
+                        <p className="text-muted-foreground">
                           {s.durationMin} min · L.{s.priceHNL.toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeService(i)}
+                        className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Eliminar servicio"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 rounded-full"
+                  onClick={() => setStep(0)}
+                >
+                  Atrás
+                </Button>
+                <Button
+                  className="h-11 flex-1 rounded-full font-semibold"
+                  onClick={() => setStep(2)}
+                  disabled={services.length === 0}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">
+                  Confirmar
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Revisá tu información. Después activamos tu prueba de 14 días.
+                </p>
+              </div>
+
+              <div className="space-y-4 rounded-xl border border-border/80 bg-muted/30 p-4 text-sm">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Negocio
+                  </p>
+                  <p className="mt-1 font-display text-lg font-semibold">{name}</p>
+                  <p className="text-muted-foreground">
+                    {getBusinessTypeLabel(type)} · {city}
+                  </p>
+                  <p className="text-muted-foreground">{phone}</p>
+                  {address && (
+                    <p className="text-muted-foreground">{address}</p>
+                  )}
+                </div>
+
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Servicios ({services.length})
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {services.map((s, i) => (
+                      <li key={i} className="flex justify-between gap-2">
+                        <span>{s.name}</span>
+                        <span className="shrink-0 text-muted-foreground">
+                          {s.durationMin} min · L.{s.priceHNL.toFixed(0)}
                         </span>
                       </li>
                     ))}
                   </ul>
-                )}
-
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(0)}>
-                    Atrás
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={() => setStep(2)}
-                    disabled={services.length === 0}
-                  >
-                    Siguiente
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Confirmar</CardTitle>
-                <CardDescription>
-                  Horario Lun-Sáb 8am-6pm. Siguiente paso: activar prueba (con tarjeta si
-                  Stripe está configurado, o modo demo al instante).
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-md border p-4 text-sm space-y-1">
-                  <p>
-                    <strong>{name}</strong> · {city}
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Horario inicial
                   </p>
-                  <p className="text-muted-foreground">{phone}</p>
-                  <p>{services.length} servicio(s)</p>
-                  <div className="flex flex-wrap gap-1 pt-2">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {schedules
                       .filter((s) => s.isOpen)
                       .map((s) => (
                         <span
                           key={s.dayOfWeek}
-                          className="rounded bg-muted px-2 py-0.5 text-xs"
+                          className="rounded-full bg-background px-2.5 py-1 text-xs font-medium ring-1 ring-border/80"
                         >
-                          {DAY_LABELS[s.dayOfWeek]} {s.openTime}-{s.closeTime}
+                          {DAY_LABELS[s.dayOfWeek]} {s.openTime}–{s.closeTime}
                         </span>
                       ))}
                   </div>
                 </div>
+              </div>
 
-                {error && (
-                  <p className="text-sm text-destructive">{error}</p>
-                )}
+              {error && (
+                <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </p>
+              )}
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep(1)}>
-                    Atrás
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleFinish}
-                    disabled={loading}
-                  >
-                    {loading ? "Activando..." : "Continuar"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 rounded-full"
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                >
+                  Atrás
+                </Button>
+                <Button
+                  className={cn(
+                    "h-11 flex-1 rounded-full font-semibold",
+                    "bg-accent text-accent-foreground hover:bg-accent/90"
+                  )}
+                  onClick={handleFinish}
+                  disabled={loading}
+                >
+                  {loading ? "Activando..." : "Activar prueba gratis"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="mt-6 pb-4 text-center text-xs text-muted-foreground">
+          Podés editar horarios y más opciones después en Configuración
+        </p>
       </div>
     </div>
   );

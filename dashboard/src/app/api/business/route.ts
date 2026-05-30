@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { BUSINESS_TYPE_VALUES } from "@/lib/business-types";
 import { z } from "zod";
 
 const businessSchema = z.object({
   name: z.string().min(2),
-  type: z.enum(["salon", "clinic", "mechanic", "dentist", "barbershop"]),
+  type: z.enum(BUSINESS_TYPE_VALUES),
   phone: z.string().regex(/^\+504[39]\d{7}$/, "Formato: +504XXXXXXXX"),
   city: z.string().min(2),
   address: z.string().optional(),

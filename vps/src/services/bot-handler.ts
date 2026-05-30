@@ -8,6 +8,7 @@ import {
   saveOutgoingMessage,
   createAppointmentFromBot,
 } from "./db.js";
+import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
 
 const SUBSCRIPTION_INACTIVE_MESSAGE =
   "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
@@ -111,6 +112,7 @@ export async function handleIncomingMessage({
   }
 
   let reply: string;
+  let replyMenu: ReturnType<typeof parseReplyMenu>["menu"] = undefined;
 
   if (isTrivialMessage(body)) {
     reply = randomTrivialReply();
@@ -136,7 +138,9 @@ export async function handleIncomingMessage({
     const rawReply = textBlock?.type === "text" ? textBlock.text : "Disculpá, tuve un problemita. ¿Podés repetir?";
 
     const { clean, confirmed, appointmentData } = stripConfirmationKeyword(rawReply);
-    reply = clean;
+    const parsedMenu = parseReplyMenu(clean);
+    reply = parsedMenu.clean;
+    replyMenu = parsedMenu.menu;
 
     if (confirmed && appointmentData) {
       try {
@@ -157,13 +161,13 @@ export async function handleIncomingMessage({
   }
 
   const jid = customerPhone.replace("+", "") + "@s.whatsapp.net";
-  await sock.sendMessage(jid, { text: reply });
-  await saveOutgoingMessage(businessId, customerPhone, reply);
+  const sentText = await sendReplyWithMenu(sock, jid, reply, replyMenu);
+  await saveOutgoingMessage(businessId, customerPhone, sentText);
 
   io.to(`business:${businessId}`).emit("message:new", {
     businessId,
     customerPhone,
-    body: reply,
+    body: sentText,
     fromClient: false,
     createdAt: new Date().toISOString(),
   });

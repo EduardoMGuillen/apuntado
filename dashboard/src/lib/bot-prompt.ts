@@ -2,6 +2,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Business, Service, Schedule, Employee } from "@prisma/client";
+import { getBusinessTypeLabel } from "@/lib/business-types";
 
 const TZ = "America/Tegucigalpa";
 
@@ -80,7 +81,9 @@ export function buildSystemPrompt(business: BusinessWithRelations, availability:
     ? `\nInstrucciones adicionales del negocio:\n${business.settings.botInstructions}`
     : "";
 
-  return `Sos el asistente de WhatsApp de "${business.name}" (${business.type}) en ${business.city}, Honduras.
+  const typeLabel = getBusinessTypeLabel(business.type);
+
+  return `Sos el asistente de WhatsApp de "${business.name}" (${typeLabel}) en ${business.city}, Honduras.
 Tu trabajo es ayudar a clientes a agendar citas de forma natural, en español hondureño casual (usá "vos", "cheque", "pa'", etc.).
 Nunca repitas el mismo texto dos veces. Sé breve y amable.
 
@@ -106,6 +109,14 @@ REGLAS:
 - scheduledAt debe ser ISO 8601 en zona America/Tegucigalpa
 - NO enviés mensajes masivos ni promociones
 - Si no hay disponibilidad, ofrecé alternativas
+
+POSIBLES RESPUESTAS (menú):
+- Cuando tenga sentido elegir entre 2 y 6 opciones concretas (servicios, confirmar sí/no, horarios sugeridos), podés agregar al final una línea MENU con JSON. El cliente NO la ve.
+- Variá el texto introductorio y las etiquetas cada vez para que no suenen a bot ni plantilla fija.
+- Reformulá las opciones con tono natural hondureño (ej. "Corte clásico", "Nomás barba", "Combo full", "Mañana temprano", "Sí, confirmá").
+- Formato: MENU:{"options":["Opción 1","Opción 2"]} — opciones cortas (máx ~22 caracteres).
+- NO uses MENU en saludos, despedidas, mensajes triviales ni cuando el cliente ya escribió texto libre claro.
+- Usalo sobre todo para listar servicios, confirmar citas o proponer horarios alternativos.
 ${customInstructions}`.trim();
 }
 
