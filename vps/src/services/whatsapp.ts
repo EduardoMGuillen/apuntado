@@ -1,5 +1,7 @@
 import makeWASocket, {
+  Browsers,
   DisconnectReason,
+  fetchLatestWaWebVersion,
   useMultiFileAuthState,
   type WASocket,
 } from "@whiskeysockets/baileys";
@@ -24,6 +26,39 @@ const sessions = new Map<string, SessionState>();
 const AUTH_DIR =
   process.env.AUTH_SESSIONS_DIR ||
   path.join(process.cwd(), "auth_sessions");
+
+/** WhatsApp rechaza conexiones con versión de protocolo vieja (error 405). */
+const FALLBACK_WA_VERSION: [number, number, number] = [2, 3000, 1034074495];
+
+let cachedWaVersion: [number, number, number] | undefined;
+
+const FATAL_DISCONNECT_CODES = new Set<number>([
+  DisconnectReason.loggedOut,
+  DisconnectReason.forbidden,
+  DisconnectReason.multideviceMismatch,
+  DisconnectReason.badSession,
+  DisconnectReason.connectionReplaced,
+  405,
+  403,
+  401,
+]);
+
+async function resolveWaVersion(): Promise<[number, number, number]> {
+  if (cachedWaVersion) return cachedWaVersion;
+
+  try {
+    const { version, isLatest } = await fetchLatestWaWebVersion({});
+    cachedWaVersion = version as [number, number, number];
+    console.log(
+      `[WhatsApp] Versión WA: ${cachedWaVersion.join(".")} (latest=${isLatest})`
+    );
+    return cachedWaVersion;
+  } catch (error) {
+    console.warn("[WhatsApp] No se pudo obtener versión WA, usando fallback", error);
+    cachedWaVersion = FALLBACK_WA_VERSION;
+    return cachedWaVersion;
+  }
+}
 
 function ensureAuthDir(): void {
   if (!fs.existsSync(AUTH_DIR)) {
@@ -104,11 +139,17 @@ export async function startSession(
   ensureAuthDir();
   const authPath = path.join(AUTH_DIR, businessId);
   const { state, saveCreds } = await useMultiFileAuthState(authPath);
+  const version = await resolveWaVersion();
 
   const sock = makeWASocket({
     auth: state,
     logger,
     printQRInTerminal: false,
+    version,
+    browser: Browsers.macOS("Chrome"),
+    connectTimeoutMs: 60_000,
+    defaultQueryTimeoutMs: 60_000,
+    keepAliveIntervalMs: 25_000,
   });
 
   sessions.set(businessId, { sock, connected: false });
@@ -128,10 +169,12 @@ export async function startSession(
 
     if (connection === "close") {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+      const isFatal =
+        statusCode !== undefined && FATAL_DISCONNECT_CODES.has(statusCode);
+
       console.log(
-        `[WhatsApp] Conexión cerrada: ${businessId} code=${statusCode ?? "unknown"}`
+        `[WhatsApp] Conexión cerrada: ${businessId} code=${statusCode ?? "unknown"} fatal=${isFatal}`
       );
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       const session = sessions.get(businessId);
       if (session) {
@@ -144,8 +187,20 @@ export async function startSession(
         connected: false,
       });
 
+      if (isFatal) {
+        teardownSession(businessId);
+        if (statusCode === 405 || statusCode === DisconnectReason.forbidden) {
+          clearAuthFiles(businessId);
+        }
+        return;
+      }
+
+      const shouldReconnect =
+        statusCode !== DisconnectReason.loggedOut &&
+        statusCode !== DisconnectReason.connectionReplaced;
+
       if (shouldReconnect) {
-        setTimeout(() => startSession(businessId, io), 3000);
+        setTimeout(() => startSession(businessId, io, { forceQr: false }), 5000);
       } else {
         sessions.delete(businessId);
       }
