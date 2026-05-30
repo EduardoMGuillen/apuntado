@@ -121,12 +121,16 @@ export async function startSession(
     if (qr) {
       const session = sessions.get(businessId)!;
       session.qr = qr;
+      console.log(`[WhatsApp] QR generado: ${businessId}`);
       qrcode.generate(qr, { small: true });
       io.to(`business:${businessId}`).emit("whatsapp:qr", { businessId, qr });
     }
 
     if (connection === "close") {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
+      console.log(
+        `[WhatsApp] Conexión cerrada: ${businessId} code=${statusCode ?? "unknown"}`
+      );
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       const session = sessions.get(businessId);

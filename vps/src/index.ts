@@ -37,8 +37,8 @@ setupSocketHandlers(io);
 startTakeoverTimeoutJob();
 startReminderJob();
 
-httpServer.listen(PORT, () => {
-  console.log(`[Apuntado VPS] Servidor corriendo en puerto ${PORT}`);
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`[Apuntado VPS] Servidor corriendo en 0.0.0.0:${PORT}`);
 });
 
 export { io };

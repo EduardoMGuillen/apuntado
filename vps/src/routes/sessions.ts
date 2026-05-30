@@ -41,10 +41,12 @@ export function sessionRouter(io: Server) {
           typeof req.body === "object" &&
           (req.body as { forceQr?: boolean }).forceQr === true);
 
+      console.log(`[sessions] POST /start businessId=${businessId} forceQr=${forceQr !== false}`);
+
       await startSession(businessId, io, { forceQr: forceQr !== false });
 
-      // Responder al toque: Vercel corta funciones ~10s; el dashboard hace polling del QR.
       const qr = getQrCode(businessId);
+      console.log(`[sessions] start done businessId=${businessId} hasQr=${!!qr}`);
       res.json({
         ok: true,
         qr: qr ?? undefined,
