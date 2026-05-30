@@ -75,7 +75,7 @@ function LoginForm() {
     } catch (err) {
       console.error("[login]", err);
       setError(
-        "Error de conexión. En Vercel verificá DATABASE_URL, NEXTAUTH_SECRET y NEXTAUTH_URL (https://www.apuntado.app)."
+        "Error de conexión. En Vercel verificá DATABASE_URL, NEXTAUTH_SECRET y NEXTAUTH_URL (https://apuntado.app)."
       );
     } finally {
       setLoading(false);
