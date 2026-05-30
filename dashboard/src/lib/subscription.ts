@@ -2,7 +2,7 @@ import type { Subscription } from "@prisma/client";
 
 export type SubscriptionAccess = {
   active: boolean;
-  reason?: "trial" | "paid" | "expired" | "past_due" | "canceled";
+  reason?: "trial" | "paid" | "expired" | "past_due" | "canceled" | "pending";
   plan: string;
   status: string;
   trialEndsAt: Date | null;
@@ -25,14 +25,14 @@ export function getSubscriptionAccess(
 
   const now = new Date();
 
-  if (sub.status === "active" && sub.stripeSubscriptionId) {
+  if (sub.status === "pending") {
     return {
-      active: true,
-      reason: "paid",
+      active: false,
+      reason: "pending",
       plan: sub.plan,
-      status: sub.status,
-      trialEndsAt: sub.trialEndsAt,
-      currentPeriodEnd: sub.currentPeriodEnd,
+      status: "pending",
+      trialEndsAt: null,
+      currentPeriodEnd: null,
     };
   }
 
@@ -58,11 +58,12 @@ export function getSubscriptionAccess(
     };
   }
 
-  if (sub.trialEndsAt && sub.trialEndsAt > now) {
+  if (sub.status === "active" && sub.stripeSubscriptionId) {
+    const inTrial = sub.trialEndsAt && sub.trialEndsAt > now;
     return {
       active: true,
-      reason: "trial",
-      plan: "trial",
+      reason: inTrial ? "trial" : "paid",
+      plan: sub.plan,
       status: sub.status,
       trialEndsAt: sub.trialEndsAt,
       currentPeriodEnd: sub.currentPeriodEnd,
@@ -73,7 +74,7 @@ export function getSubscriptionAccess(
     active: false,
     reason: "expired",
     plan: sub.plan,
-    status: "expired",
+    status: sub.status,
     trialEndsAt: sub.trialEndsAt,
     currentPeriodEnd: sub.currentPeriodEnd,
   };

@@ -1,5 +1,8 @@
 export type PlanId = "basic" | "pro";
 
+/** Días de prueba con tarjeta (Stripe); después se cobra el plan elegido. */
+export const TRIAL_DAYS = 14;
+
 export const PLANS: Record<
   PlanId,
   {

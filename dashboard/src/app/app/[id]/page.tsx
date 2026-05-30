@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { getSubscriptionAccess } from "@/lib/subscription";
@@ -11,7 +11,7 @@ export default async function BusinessDashboard({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(getAuthOptions());
   if (!session?.user?.id) redirect("/login");
 
   const business = await prisma.business.findFirst({
@@ -24,6 +24,11 @@ export default async function BusinessDashboard({
   });
 
   if (!business) redirect("/app");
+
+  const access = getSubscriptionAccess(business.subscription);
+  if (access.reason === "pending") {
+    redirect(`/app/${business.id}/suscripcion?needs_card=1`);
+  }
 
   const todayAppointments = await prisma.appointment.count({
     where: {
@@ -39,8 +44,6 @@ export default async function BusinessDashboard({
   const pendingMessages = await prisma.customer.count({
     where: { businessId: business.id, manualTakeover: true },
   });
-
-  const access = getSubscriptionAccess(business.subscription);
 
   return (
     <DashboardShell business={business}>

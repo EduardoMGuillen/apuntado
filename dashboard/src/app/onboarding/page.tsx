@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +35,6 @@ const DEFAULT_SCHEDULE = [
 const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -102,7 +100,21 @@ export default function OnboardingPage() {
     }
 
     const { id } = await res.json();
-    router.push(`/app/${id}/whatsapp`);
+
+    const checkoutRes = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ businessId: id, plan: "basic", trial: true }),
+    });
+
+    const checkoutData = await checkoutRes.json();
+    if (checkoutData.url) {
+      window.location.href = checkoutData.url;
+      return;
+    }
+
+    setError(checkoutData.error || "No se pudo activar la suscripción");
+    setLoading(false);
   }
 
   return (
@@ -244,7 +256,10 @@ export default function OnboardingPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Confirmar</CardTitle>
-                <CardDescription>Horario por defecto: Lun-Sáb 8am-6pm</CardDescription>
+                <CardDescription>
+                  Horario Lun-Sáb 8am-6pm. Siguiente paso: activar prueba (con tarjeta si
+                  Stripe está configurado, o modo demo al instante).
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="rounded-md border p-4 text-sm space-y-1">
@@ -280,7 +295,7 @@ export default function OnboardingPage() {
                     onClick={handleFinish}
                     disabled={loading}
                   >
-                    {loading ? "Creando..." : "Conectar WhatsApp"}
+                    {loading ? "Activando..." : "Continuar"}
                   </Button>
                 </div>
               </CardContent>

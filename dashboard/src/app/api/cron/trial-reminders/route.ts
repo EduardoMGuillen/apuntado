@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { addDays, differenceInDays } from "date-fns";
 import { sendTrialEndingEmail } from "@/lib/resend";
 
 export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -18,11 +18,10 @@ export async function GET(req: NextRequest) {
 
   const subscriptions = await prisma.subscription.findMany({
     where: {
-      plan: "trial",
       status: "active",
       trialReminderSent: false,
       trialEndsAt: { gte: now, lte: in3Days },
-      stripeSubscriptionId: null,
+      stripeSubscriptionId: { not: null },
     },
     include: {
       business: {

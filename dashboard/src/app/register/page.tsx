@@ -65,7 +65,7 @@ export default function RegisterPage() {
             <Logo size={48} showText={false} />
           </div>
           <CardTitle>Creá tu cuenta</CardTitle>
-          <CardDescription>14 días de prueba gratis, sin tarjeta</CardDescription>
+          <CardDescription>14 días gratis — solo pedimos tarjeta, sin cobro al inicio</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">

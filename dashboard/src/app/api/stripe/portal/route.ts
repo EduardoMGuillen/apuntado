@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
+import { isStripeConfigured, isSimulatedStripeId } from "@/lib/stripe-config";
 
 const bodySchema = z.object({
   businessId: z.string(),
 });
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(getAuthOptions());
   if (!session?.user?.id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  if (!isStripeConfigured()) {
+    return NextResponse.json(
+      { error: "Portal no disponible en modo demo (Stripe no configurado)" },
+      { status: 400 }
+    );
   }
 
   try {
@@ -23,7 +31,9 @@ export async function POST(req: NextRequest) {
       include: { subscription: true },
     });
 
-    if (!business?.subscription?.stripeCustomerId) {
+    const customerId = business?.subscription?.stripeCustomerId;
+
+    if (!customerId || isSimulatedStripeId(customerId)) {
       return NextResponse.json(
         { error: "No hay suscripción de Stripe asociada" },
         { status: 400 }
@@ -34,7 +44,7 @@ export async function POST(req: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: business.subscription.stripeCustomerId,
+      customer: customerId,
       return_url: `${appUrl}/app/${businessId}/suscripcion`,
     });
 

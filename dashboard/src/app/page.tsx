@@ -47,7 +47,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="text-sm text-muted-foreground">
-              Desde L.375/mes · Sin contratos · Solo respuestas reactivas
+              14 días gratis con tarjeta · Después desde $15/mes · Cancelá cuando querás
             </p>
           </div>
         </section>
@@ -90,7 +90,7 @@ export default function LandingPage() {
         <section className="container mx-auto px-4 py-16" id="precios">
           <h2 className="mb-2 text-center text-2xl font-bold">Precios simples</h2>
           <p className="mb-10 text-center text-muted-foreground">
-            14 días gratis · Sin contrato · Cancelá cuando querás
+            14 días gratis con tarjeta · Sin cobro durante la prueba · Cancelá cuando querás
           </p>
           <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
             {[

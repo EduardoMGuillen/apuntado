@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import { getSubscriptionAccess } from "@/lib/subscription";
+import { isStripeConfigured } from "@/lib/stripe-config";
 import { Badge } from "@/components/ui/badge";
 
 export default async function SuscripcionPage({
@@ -13,7 +14,7 @@ export default async function SuscripcionPage({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(getAuthOptions());
   if (!session?.user?.id) redirect("/login");
 
   const business = await prisma.business.findFirst({
@@ -24,6 +25,7 @@ export default async function SuscripcionPage({
   if (!business) redirect("/app");
 
   const access = getSubscriptionAccess(business.subscription);
+  const stripeSimulate = !isStripeConfigured();
 
   return (
     <DashboardShell business={business}>
@@ -31,7 +33,9 @@ export default async function SuscripcionPage({
         <div>
           <h1 className="text-2xl font-bold">Suscripción</h1>
           <p className="text-muted-foreground">
-            Elegí un plan para mantener el bot activo después de la prueba gratis.
+            {stripeSimulate
+              ? "Modo demo: un solo plan activo (Básico o Pro)."
+              : "Un plan por negocio. Podés cambiar entre Básico y Pro cuando quieras."}
           </p>
           <div className="mt-2 flex gap-2">
             <Badge variant="secondary" className="capitalize">
@@ -58,6 +62,7 @@ export default async function SuscripcionPage({
               currentPeriodEnd: access.currentPeriodEnd?.toISOString() ?? null,
             }}
             hasStripeCustomer={!!business.subscription?.stripeCustomerId}
+            stripeSimulate={stripeSimulate}
           />
         </Suspense>
       </div>

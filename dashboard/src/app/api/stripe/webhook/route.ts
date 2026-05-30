@@ -15,19 +15,31 @@ function getSubscriptionPeriodEnd(stripeSub: Stripe.Subscription): Date | null {
   return null;
 }
 
+function getTrialEnd(stripeSub: Stripe.Subscription): Date | null {
+  const raw = stripeSub as Stripe.Subscription & { trial_end?: number | null };
+  if (raw.trial_end) {
+    return new Date(raw.trial_end * 1000);
+  }
+  return null;
+}
+
 async function syncSubscription(
   stripeSub: Stripe.Subscription,
   businessId: string,
   plan: PlanId
 ) {
-  const status =
-    stripeSub.status === "active"
-      ? "active"
-      : stripeSub.status === "past_due"
-        ? "past_due"
-        : stripeSub.status === "canceled"
-          ? "canceled"
-          : stripeSub.status;
+  const trialEndsAt = getTrialEnd(stripeSub);
+
+  let status: string;
+  if (stripeSub.status === "trialing" || stripeSub.status === "active") {
+    status = "active";
+  } else if (stripeSub.status === "past_due") {
+    status = "past_due";
+  } else if (stripeSub.status === "canceled" || stripeSub.status === "unpaid") {
+    status = "canceled";
+  } else {
+    status = stripeSub.status;
+  }
 
   await prisma.subscription.update({
     where: { businessId },
@@ -35,6 +47,7 @@ async function syncSubscription(
       plan,
       status,
       stripeSubscriptionId: stripeSub.id,
+      trialEndsAt: trialEndsAt,
       currentPeriodEnd: getSubscriptionPeriodEnd(stripeSub),
     },
   });
@@ -91,10 +104,13 @@ export async function POST(req: NextRequest) {
         });
 
         if (business?.owner.email) {
+          const inTrial = stripeSub.status === "trialing";
           await sendSubscriptionActiveEmail({
             to: business.owner.email,
             name: business.owner.name,
-            planName: PLANS[plan].name,
+            planName: inTrial
+              ? `Prueba ${PLANS[plan].name}`
+              : PLANS[plan].name,
           });
         }
         break;
@@ -118,6 +134,7 @@ export async function POST(req: NextRequest) {
           data: {
             status: "canceled",
             stripeSubscriptionId: null,
+            trialEndsAt: null,
             currentPeriodEnd: null,
           },
         });

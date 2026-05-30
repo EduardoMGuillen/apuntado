@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function GET(req: NextRequest) {
+/** Marca como expirados negocios que nunca completaron el checkout con tarjeta. */
+export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
@@ -11,14 +12,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const now = new Date();
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const result = await prisma.subscription.updateMany({
     where: {
-      plan: "trial",
-      status: "active",
-      trialEndsAt: { lt: now },
+      status: "pending",
       stripeSubscriptionId: null,
+      updatedAt: { lt: cutoff },
     },
     data: { status: "expired" },
   });

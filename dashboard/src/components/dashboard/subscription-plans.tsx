@@ -17,7 +17,7 @@ type PlanId = "basic" | "pro";
 
 type AccessInfo = {
   active: boolean;
-  reason?: "trial" | "paid" | "expired" | "past_due" | "canceled";
+  reason?: "trial" | "paid" | "expired" | "past_due" | "canceled" | "pending";
   plan: string;
   status: string;
   trialEndsAt: string | null;
@@ -56,30 +56,41 @@ interface Props {
   businessId: string;
   access: AccessInfo;
   hasStripeCustomer: boolean;
+  stripeSimulate?: boolean;
 }
 
 export function SubscriptionPlans({
   businessId,
   access,
   hasStripeCustomer,
+  stripeSimulate = false,
 }: Props) {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState<PlanId | "portal" | null>(null);
 
   const success = searchParams.get("success");
+  const simulated = searchParams.get("simulated");
   const canceled = searchParams.get("canceled");
+  const needsCard = searchParams.get("needs_card");
 
-  async function checkout(plan: PlanId) {
+  async function checkout(plan: PlanId, withTrial = false) {
     setLoading(plan);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId, plan }),
+        body: JSON.stringify({ businessId, plan, trial: withTrial }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert(data.error || "Error al iniciar pago");
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      if (data.code === "SAME_PLAN") {
+        alert("Ya tenés este plan activo.");
+        return;
+      }
+      alert(data.error || "Error al activar plan");
     } finally {
       setLoading(null);
     }
@@ -101,40 +112,68 @@ export function SubscriptionPlans({
     }
   }
 
-  const currentPlan = access.plan as PlanId | "trial";
+  const currentPlan = access.plan as PlanId;
 
   return (
     <div className="space-y-6">
-      {success && (
-        <div className="rounded-lg border border-accent/50 bg-accent/10 p-4 text-sm">
-          ¡Pago exitoso! Tu suscripción se activará en unos segundos.
-        </div>
-      )}
-      {canceled && (
-        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-          Pago cancelado. Podés intentar de nuevo cuando quieras.
+      {stripeSimulate && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+          <strong>Modo demo:</strong> Stripe no está configurado. Al elegir un plan se
+          activa al instante sin cobro real (simulación local).
         </div>
       )}
 
-      {!access.active && (
+      {(success || simulated || searchParams.get("plan_changed")) && (
+        <div className="rounded-lg border border-accent/50 bg-accent/10 p-4 text-sm">
+          {searchParams.get("plan_changed")
+            ? "Plan actualizado. Solo tenés un plan activo a la vez."
+            : simulated
+              ? "Plan activado en modo demo. Ya podés usar el bot."
+              : "¡Pago exitoso! Tu suscripción se activará en unos segundos."}
+        </div>
+      )}
+      {(canceled || needsCard) && !stripeSimulate && (
+        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+          {needsCard
+            ? "Para usar Apuntado necesitás registrar una tarjeta. No se cobra nada durante los 14 días de prueba."
+            : "Registro cancelado. Podés intentar de nuevo cuando quieras."}
+        </div>
+      )}
+
+      {access.reason === "pending" && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <p className="mb-2">
+            Elegí <strong>un solo plan</strong> para tu prueba de 14 días
+            {stripeSimulate ? " (modo demo)." : " con tarjeta."}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Solo podés tener Básico o Pro activo, no ambos.
+          </p>
+        </div>
+      )}
+
+      {!access.active && access.reason !== "pending" && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
           Tu prueba terminó o la suscripción está inactiva. El bot de WhatsApp no
           responderá hasta que actives un plan.
         </div>
       )}
 
-      {access.reason === "trial" && access.trialEndsAt && (
-        <p className="text-sm text-muted-foreground">
-          Prueba gratis hasta:{" "}
-          <strong>
-            {new Date(access.trialEndsAt).toLocaleDateString("es-HN", {
-              dateStyle: "long",
-            })}
-          </strong>
-        </p>
-      )}
+      {(access.reason === "trial" || (access.active && access.trialEndsAt)) &&
+        access.trialEndsAt && (
+          <p className="text-sm text-muted-foreground">
+            Prueba hasta:{" "}
+            <strong>
+              {new Date(access.trialEndsAt).toLocaleDateString("es-HN", {
+                dateStyle: "long",
+              })}
+            </strong>
+            {" · "}
+            Plan: <span className="capitalize">{access.plan}</span>
+          </p>
+        )}
 
-      {hasStripeCustomer && (
+      {hasStripeCustomer && !stripeSimulate && (
         <Button variant="outline" onClick={openPortal} disabled={loading === "portal"}>
           {loading === "portal" ? "Abriendo..." : "Administrar facturación"}
         </Button>
@@ -143,8 +182,8 @@ export function SubscriptionPlans({
       <div className="grid gap-4 md:grid-cols-2">
         {(["basic", "pro"] as PlanId[]).map((plan) => {
           const p = PLANS_UI[plan];
-          const isCurrent =
-            access.active && access.reason === "paid" && currentPlan === plan;
+          const isCurrent = access.active && currentPlan === plan;
+          const canSwitch = access.active && !isCurrent;
 
           return (
             <Card
@@ -179,13 +218,27 @@ export function SubscriptionPlans({
                   className="w-full"
                   variant={plan === "pro" ? "default" : "outline"}
                   disabled={isCurrent || loading !== null}
-                  onClick={() => checkout(plan)}
+                  onClick={() =>
+                    checkout(
+                      plan,
+                      access.reason === "pending" &&
+                        (stripeSimulate || !access.active)
+                    )
+                  }
                 >
                   {loading === plan
-                    ? "Redirigiendo..."
+                    ? "Activando..."
                     : isCurrent
-                      ? "Plan activo"
-                      : "Suscribirme"}
+                      ? "Plan actual"
+                      : canSwitch
+                        ? `Cambiar a ${p.name}`
+                        : access.reason === "pending"
+                          ? stripeSimulate
+                            ? `Empezar con ${p.name}`
+                            : `Probar ${p.name}`
+                          : stripeSimulate
+                            ? `Activar ${p.name} (demo)`
+                            : "Suscribirme"}
                 </Button>
               </CardFooter>
             </Card>
