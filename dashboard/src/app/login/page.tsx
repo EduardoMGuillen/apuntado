@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,11 +11,32 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-export default function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  CredentialsSignin: "Email o contraseña incorrectos",
+  OAuthSignin: "Error al iniciar sesión con Google",
+  OAuthCallback: "Error al volver de Google. Revisá las URLs en Google Cloud.",
+  OAuthAccountNotLinked:
+    "Este email ya está registrado con contraseña. Usá email y contraseña.",
+  Configuration:
+    "Error de configuración del servidor (NEXTAUTH_URL o DATABASE_URL).",
+  Default: "No se pudo iniciar sesión. Intentá de nuevo.",
+};
+
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const urlError = searchParams.get("error");
+  const registered = searchParams.get("registered");
+
+  useEffect(() => {
+    if (urlError) {
+      setError(ERROR_MESSAGES[urlError] ?? ERROR_MESSAGES.Default);
+    }
+  }, [urlError]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,29 +51,31 @@ export default function LoginPage() {
       });
 
       if (!result) {
-        setError("No se pudo conectar con el servidor. Revisá tu conexión.");
+        setError("No se pudo conectar con el servidor.");
         return;
       }
 
       if (result.error) {
         setError(
-          result.error === "CredentialsSignin"
-            ? "Email o contraseña incorrectos"
-            : "No se pudo iniciar sesión. Intentá de nuevo."
+          ERROR_MESSAGES[result.error] ?? ERROR_MESSAGES.Default
         );
         return;
       }
 
       if (!result.ok) {
-        setError("No se pudo iniciar sesión. Intentá de nuevo.");
+        setError(ERROR_MESSAGES.Default);
         return;
       }
 
-      // Redirección completa para que la cookie de sesión se aplique antes del middleware
-      window.location.assign("/app");
-    } catch {
+      // Recarga completa para que middleware y servidor lean la cookie JWT
+      const callback = searchParams.get("callbackUrl") || "/app";
+      window.location.href = callback.startsWith("/")
+        ? callback
+        : "/app";
+    } catch (err) {
+      console.error("[login]", err);
       setError(
-        "Error de conexión. Si estás en producción, verificá que DATABASE_URL y NEXTAUTH_URL estén configurados."
+        "Error de conexión. En Vercel verificá DATABASE_URL, NEXTAUTH_SECRET y NEXTAUTH_URL (https://www.apuntado.app)."
       );
     } finally {
       setLoading(false);
@@ -67,6 +91,11 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="glass-card space-y-5 rounded-2xl p-6 sm:p-8"
       >
+        {registered && !error && (
+          <p className="rounded-lg bg-accent/10 p-3 text-sm text-accent-foreground">
+            Cuenta creada. Iniciá sesión con tu email y contraseña.
+          </p>
+        )}
         {error && (
           <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -121,7 +150,11 @@ export default function LoginPage() {
           variant="outline"
           className="h-11 w-full rounded-full"
           disabled={loading}
-          onClick={() => signIn("google", { callbackUrl: "/app" })}
+          onClick={() =>
+            signIn("google", {
+              callbackUrl: searchParams.get("callbackUrl") || "/app",
+            })
+          }
         >
           Continuar con Google
         </Button>
@@ -133,5 +166,19 @@ export default function LoginPage() {
         </p>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthLayout title="Bienvenido de vuelta" subtitle="Cargando...">
+          <div className="glass-card h-64 animate-pulse rounded-2xl" />
+        </AuthLayout>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

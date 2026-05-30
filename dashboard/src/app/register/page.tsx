@@ -46,11 +46,11 @@ export default function RegisterPage() {
       });
 
       if (!result?.ok) {
-        setError("Cuenta creada. Iniciá sesión en el login.");
+        window.location.href = "/login?registered=1";
         return;
       }
 
-      window.location.assign("/bienvenida");
+      window.location.href = "/bienvenida";
     } catch {
       setError("Error de conexión. Intentá de nuevo.");
     } finally {

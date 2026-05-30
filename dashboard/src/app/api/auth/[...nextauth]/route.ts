@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
-import { getAuthOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const handler = NextAuth(getAuthOptions());
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

@@ -1,10 +1,12 @@
 import { withAuth } from "next-auth/middleware";
 
 export default withAuth({
-  secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/login" },
   callbacks: {
-    authorized: ({ token }) => !!token,
+    authorized: ({ token }) => {
+      const id = token?.id ?? token?.sub;
+      return Boolean(id);
+    },
   },
 });
 
