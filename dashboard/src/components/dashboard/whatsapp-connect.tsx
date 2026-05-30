@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { io, Socket } from "socket.io-client";
+import { Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const QR_POLL_ATTEMPTS = 15;
+const QR_POLL_INTERVAL_MS = 2000;
 
 interface Props {
   business: {
@@ -30,8 +35,12 @@ export function WhatsappConnectClient({ business }: Props) {
   );
   const [qr, setQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [loadingPhase, setLoadingPhase] = useState("");
+  const [elapsedSec, setElapsedSec] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [statusHint, setStatusHint] = useState<string | null>(null);
+  const loadingStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
     const vpsUrl = process.env.NEXT_PUBLIC_VPS_URL || "http://localhost:3001";
@@ -52,6 +61,9 @@ export function WhatsappConnectClient({ business }: Props) {
       setQr(data.qr);
       setError(null);
       setStatusHint(null);
+      setProgress(100);
+      setLoading(false);
+      setLoadingPhase("");
     });
 
     socket.on("whatsapp:status", (data: { connected: boolean }) => {
@@ -60,6 +72,8 @@ export function WhatsappConnectClient({ business }: Props) {
         setQr(null);
         setError(null);
         setStatusHint(null);
+        setLoading(false);
+        setProgress(0);
       }
     });
 
@@ -69,24 +83,62 @@ export function WhatsappConnectClient({ business }: Props) {
     };
   }, [business.id]);
 
+  useEffect(() => {
+    if (!loading) {
+      loadingStartedAt.current = null;
+      setElapsedSec(0);
+      return;
+    }
+
+    loadingStartedAt.current = Date.now();
+    const tick = setInterval(() => {
+      if (loadingStartedAt.current) {
+        setElapsedSec(
+          Math.floor((Date.now() - loadingStartedAt.current) / 1000)
+        );
+      }
+    }, 1000);
+
+    const creep = setInterval(() => {
+      setProgress((p) => (p < 88 ? p + 0.8 : p));
+    }, 400);
+
+    return () => {
+      clearInterval(tick);
+      clearInterval(creep);
+    };
+  }, [loading]);
+
   async function fetchQrOnce() {
     const res = await fetch(`/api/business/${business.id}/whatsapp/qr`);
     if (res.ok) {
       const data = await res.json();
       if (data.qr) {
         setQr(data.qr);
+        setProgress(100);
         return true;
       }
     }
     return false;
   }
 
+  function finishLoading() {
+    setLoading(false);
+    setProgress(0);
+    setLoadingPhase("");
+  }
+
   async function startSession() {
     setLoading(true);
     setError(null);
-    setStatusHint("Iniciando sesión de WhatsApp…");
+    setStatusHint(null);
+    setProgress(8);
+    setLoadingPhase("Conectando con el servidor…");
 
     try {
+      setProgress(15);
+      setLoadingPhase("Iniciando sesión de WhatsApp…");
+
       const res = await fetch(`/api/business/${business.id}/whatsapp/start`, {
         method: "POST",
       });
@@ -98,34 +150,42 @@ export function WhatsappConnectClient({ business }: Props) {
           data.error ||
             "No se pudo iniciar la sesión. Revisá que VPS_URL y VPS_SECRET estén en Vercel."
         );
+        finishLoading();
         return;
       }
 
       if (data.qr) {
         setQr(data.qr);
-        setStatusHint(null);
+        setProgress(100);
+        setLoadingPhase("¡Listo!");
+        setTimeout(finishLoading, 400);
         return;
       }
 
-      setStatusHint(
-        data.message || "Esperando código QR… Si no aparece, intentá de nuevo."
-      );
+      setProgress(42);
+      setLoadingPhase("Generando código QR…");
 
-      for (let attempt = 0; attempt < 12; attempt++) {
-        await new Promise((r) => setTimeout(r, 2000));
+      for (let attempt = 0; attempt < QR_POLL_ATTEMPTS; attempt++) {
+        await new Promise((r) => setTimeout(r, QR_POLL_INTERVAL_MS));
+        setProgress(42 + ((attempt + 1) / QR_POLL_ATTEMPTS) * 52);
+        setLoadingPhase(
+          `Esperando el código QR… (${attempt + 1}/${QR_POLL_ATTEMPTS})`
+        );
+
         if (await fetchQrOnce()) {
-          setStatusHint(null);
+          setLoadingPhase("¡Listo!");
+          setTimeout(finishLoading, 400);
           return;
         }
       }
 
       setError(
-        "El QR no llegó a tiempo. Verificá VPS_SECRET en Vercel y Fly, luego probá otra vez."
+        "El QR no llegó a tiempo. Verificá que VPS_SECRET sea igual en Vercel y Fly, luego probá otra vez."
       );
+      finishLoading();
     } catch {
       setError("Error de red al contactar el servidor. Intentá de nuevo.");
-    } finally {
-      setLoading(false);
+      finishLoading();
     }
   }
 
@@ -138,6 +198,8 @@ export function WhatsappConnectClient({ business }: Props) {
 
     return () => clearInterval(interval);
   }, [connected, qr, loading, business.id]);
+
+  const showLoadingBlock = loading && !qr;
 
   return (
     <DashboardShell business={business}>
@@ -167,15 +229,44 @@ export function WhatsappConnectClient({ business }: Props) {
               </div>
             )}
 
+            {showLoadingBlock && (
+              <div
+                className="w-full space-y-4 rounded-xl border border-border/80 bg-muted/30 p-5"
+                role="status"
+                aria-live="polite"
+                aria-busy="true"
+              >
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                  <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+                  <span>{loadingPhase || "Generando QR…"}</span>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={cn(
+                        "h-full rounded-full bg-primary transition-[width] duration-300 ease-out",
+                        progress < 90 && "animate-pulse"
+                      )}
+                      style={{ width: `${Math.min(100, Math.round(progress))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{Math.min(100, Math.round(progress))}%</span>
+                    {elapsedSec > 0 && <span>{elapsedSec}s</span>}
+                  </div>
+                </div>
+
+                <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                  La primera conexión puede tardar hasta 1 minuto. No cierres
+                  esta página.
+                </p>
+              </div>
+            )}
+
             {!qr && !connected && !loading && (
               <p className="text-center text-sm text-muted-foreground">
                 Presioná el botón para generar el código QR
-              </p>
-            )}
-
-            {loading && (
-              <p className="text-center text-sm text-muted-foreground">
-                {statusHint || "Generando QR…"}
               </p>
             )}
 
@@ -198,12 +289,21 @@ export function WhatsappConnectClient({ business }: Props) {
             )}
 
             {!connected && (
-              <Button onClick={startSession} disabled={loading} className="w-full">
-                {loading
-                  ? "Generando QR…"
-                  : qr
-                    ? "Regenerar QR"
-                    : "Generar QR"}
+              <Button
+                onClick={startSession}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generando QR…
+                  </span>
+                ) : qr ? (
+                  "Regenerar QR"
+                ) : (
+                  "Generar QR"
+                )}
               </Button>
             )}
           </CardContent>
