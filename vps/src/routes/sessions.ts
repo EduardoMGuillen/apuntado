@@ -5,6 +5,7 @@ import {
   startSession,
   stopSession,
   getQrCode,
+  waitForQr,
 } from "../services/whatsapp.js";
 
 export function sessionRouter(io: Server) {
@@ -34,8 +35,19 @@ export function sessionRouter(io: Server) {
 
   router.post("/:businessId/start", async (req, res) => {
     try {
-      await startSession(req.params.businessId, io);
-      res.json({ ok: true, message: "Sesión iniciada. Escanea el QR." });
+      const { businessId } = req.params;
+      await startSession(businessId, io);
+      const qr = await waitForQr(businessId);
+
+      if (qr) {
+        res.json({ ok: true, qr });
+        return;
+      }
+
+      res.json({
+        ok: true,
+        message: "Sesión iniciada. El QR puede tardar unos segundos.",
+      });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

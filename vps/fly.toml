@@ -12,6 +12,8 @@ primary_region = "dfw"
   TZ = "America/Tegucigalpa"
   AUTH_SESSIONS_DIR = "/data/auth_sessions"
   NODE_ENV = "production"
+  DASHBOARD_URL = "https://apuntado.app"
+  CORS_ORIGINS = "https://apuntado.app,https://www.apuntado.app"
 
 [http_service]
   internal_port = 8080

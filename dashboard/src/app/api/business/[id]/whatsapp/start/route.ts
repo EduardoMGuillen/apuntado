@@ -24,10 +24,11 @@ export async function POST(
   }
 
   try {
-    await startWhatsappSession(params.id);
-    return NextResponse.json({ ok: true });
+    const data = await startWhatsappSession(params.id);
+    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Error al iniciar sesión";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

@@ -30,20 +30,37 @@ export function WhatsappConnectClient({ business }: Props) {
   );
   const [qr, setQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [statusHint, setStatusHint] = useState<string | null>(null);
 
   useEffect(() => {
     const vpsUrl = process.env.NEXT_PUBLIC_VPS_URL || "http://localhost:3001";
-    const socket: Socket = io(vpsUrl, { transports: ["websocket", "polling"] });
+    const socket: Socket = io(vpsUrl, {
+      transports: ["websocket", "polling"],
+      path: "/socket.io",
+    });
+
+    socket.on("connect_error", () => {
+      setStatusHint(
+        "No se pudo conectar en tiempo real al servidor. El QR se obtiene por la API."
+      );
+    });
 
     socket.emit("join:business", business.id);
 
     socket.on("whatsapp:qr", (data: { qr: string }) => {
       setQr(data.qr);
+      setError(null);
+      setStatusHint(null);
     });
 
     socket.on("whatsapp:status", (data: { connected: boolean }) => {
       setConnected(data.connected);
-      if (data.connected) setQr(null);
+      if (data.connected) {
+        setQr(null);
+        setError(null);
+        setStatusHint(null);
+      }
     });
 
     return () => {
@@ -52,40 +69,82 @@ export function WhatsappConnectClient({ business }: Props) {
     };
   }, [business.id]);
 
+  async function fetchQrOnce() {
+    const res = await fetch(`/api/business/${business.id}/whatsapp/qr`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.qr) {
+        setQr(data.qr);
+        return true;
+      }
+    }
+    return false;
+  }
+
   async function startSession() {
     setLoading(true);
+    setError(null);
+    setStatusHint("Iniciando sesión de WhatsApp…");
+
     try {
-      await fetch(`/api/business/${business.id}/whatsapp/start`, {
+      const res = await fetch(`/api/business/${business.id}/whatsapp/start`, {
         method: "POST",
       });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(
+          data.error ||
+            "No se pudo iniciar la sesión. Revisá que VPS_URL y VPS_SECRET estén en Vercel."
+        );
+        return;
+      }
+
+      if (data.qr) {
+        setQr(data.qr);
+        setStatusHint(null);
+        return;
+      }
+
+      setStatusHint(
+        data.message || "Esperando código QR… Si no aparece, intentá de nuevo."
+      );
+
+      for (let attempt = 0; attempt < 12; attempt++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        if (await fetchQrOnce()) {
+          setStatusHint(null);
+          return;
+        }
+      }
+
+      setError(
+        "El QR no llegó a tiempo. Verificá VPS_SECRET en Vercel y Fly, luego probá otra vez."
+      );
+    } catch {
+      setError("Error de red al contactar el servidor. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (connected || qr) return;
+    if (connected || qr || loading) return;
 
-    const poll = async () => {
-      const res = await fetch(`/api/business/${business.id}/whatsapp/qr`);
-      if (res.ok) {
-        const data = await res.json();
-        setQr(data.qr);
-      }
-    };
+    const interval = setInterval(() => {
+      void fetchQrOnce();
+    }, 3000);
 
-    const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
-  }, [connected, qr, business.id]);
+  }, [connected, qr, loading, business.id]);
 
   return (
     <DashboardShell business={business}>
       <div className="mx-auto max-w-md space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Conectar WhatsApp</h1>
-          <p className="text-muted-foreground">
-            Número: {business.phone}
-          </p>
+          <p className="text-muted-foreground">Número: {business.phone}</p>
         </div>
 
         <Card>
@@ -108,21 +167,43 @@ export function WhatsappConnectClient({ business }: Props) {
               </div>
             )}
 
-            {!qr && !connected && (
-              <p className="text-sm text-muted-foreground text-center">
+            {!qr && !connected && !loading && (
+              <p className="text-center text-sm text-muted-foreground">
                 Presioná el botón para generar el código QR
               </p>
             )}
 
+            {loading && (
+              <p className="text-center text-sm text-muted-foreground">
+                {statusHint || "Generando QR…"}
+              </p>
+            )}
+
+            {statusHint && !loading && !error && (
+              <p className="text-center text-sm text-muted-foreground">
+                {statusHint}
+              </p>
+            )}
+
+            {error && (
+              <p className="rounded-lg bg-destructive/10 p-3 text-center text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
             {connected && (
-              <p className="text-sm text-accent-foreground text-center">
+              <p className="text-center text-sm text-accent-foreground">
                 ✅ WhatsApp conectado. El bot ya puede responder mensajes.
               </p>
             )}
 
             {!connected && (
-              <Button onClick={startSession} disabled={loading}>
-                {loading ? "Iniciando..." : qr ? "Regenerar QR" : "Generar QR"}
+              <Button onClick={startSession} disabled={loading} className="w-full">
+                {loading
+                  ? "Generando QR…"
+                  : qr
+                    ? "Regenerar QR"
+                    : "Generar QR"}
               </Button>
             )}
           </CardContent>

@@ -39,13 +39,54 @@ export function getQrCode(businessId: string): string | undefined {
   return sessions.get(businessId)?.qr;
 }
 
+function teardownSession(businessId: string): void {
+  const session = sessions.get(businessId);
+  if (!session) return;
+
+  sessions.delete(businessId);
+  try {
+    session.sock.end(
+      new Boom("session restart", { statusCode: DisconnectReason.loggedOut })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function waitForQr(
+  businessId: string,
+  timeoutMs = 25_000,
+  intervalMs = 400
+): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    const started = Date.now();
+
+    const tick = () => {
+      const qr = getQrCode(businessId);
+      if (qr) {
+        resolve(qr);
+        return;
+      }
+      if (Date.now() - started >= timeoutMs) {
+        resolve(undefined);
+        return;
+      }
+      setTimeout(tick, intervalMs);
+    };
+
+    tick();
+  });
+}
+
 export async function startSession(
   businessId: string,
   io: Server
 ): Promise<void> {
-  if (sessions.has(businessId)) {
-    const existing = sessions.get(businessId)!;
-    if (existing.connected) return;
+  const existing = sessions.get(businessId);
+  if (existing?.connected) return;
+
+  if (existing) {
+    teardownSession(businessId);
   }
 
   ensureAuthDir();

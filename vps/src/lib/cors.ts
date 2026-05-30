@@ -1,5 +1,9 @@
 export function getCorsOrigins(): string[] {
-  const origins = new Set<string>(["http://localhost:3000"]);
+  const origins = new Set<string>([
+    "http://localhost:3000",
+    "https://apuntado.app",
+    "https://www.apuntado.app",
+  ]);
 
   const dashboard = process.env.DASHBOARD_URL?.trim();
   if (dashboard) {
