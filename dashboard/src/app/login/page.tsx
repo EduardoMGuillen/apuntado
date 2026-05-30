@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,20 @@ const ERROR_MESSAGES: Record<string, string> = {
   Default: "No se pudo iniciar sesión. Intentá de nuevo.",
 };
 
+function resolveCallbackUrl(raw: string | null): string {
+  if (!raw) return "/app";
+  if (raw.startsWith("/")) return raw;
+  try {
+    const url = new URL(raw);
+    if (typeof window !== "undefined" && url.hostname === window.location.hostname) {
+      return url.pathname + url.search;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "/app";
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -31,6 +45,7 @@ function LoginForm() {
 
   const urlError = searchParams.get("error");
   const registered = searchParams.get("registered");
+  const callbackUrl = resolveCallbackUrl(searchParams.get("callbackUrl"));
 
   useEffect(() => {
     if (urlError) {
@@ -44,45 +59,18 @@ function LoginForm() {
     setError("");
 
     try {
-      const result = await signIn("credentials", {
+      // redirect: true → NextAuth setea la cookie y redirige en un solo flujo (más fiable)
+      await signIn("credentials", {
         email: email.trim().toLowerCase(),
         password,
-        redirect: false,
+        callbackUrl,
+        redirect: true,
       });
-
-      if (!result) {
-        setError("No se pudo conectar con el servidor.");
-        return;
-      }
-
-      if (result.error) {
-        setError(
-          ERROR_MESSAGES[result.error] ?? ERROR_MESSAGES.Default
-        );
-        return;
-      }
-
-      if (!result.ok) {
-        setError(ERROR_MESSAGES.Default);
-        return;
-      }
-
-      const session = await getSession();
-      if (!session?.user) {
-        setError(
-          "Login correcto pero la sesión no se guardó. Borrá cookies de apuntado.app e intentá de nuevo."
-        );
-        return;
-      }
-
-      const callback = searchParams.get("callbackUrl") || "/app";
-      window.location.href = callback.startsWith("/") ? callback : "/app";
     } catch (err) {
       console.error("[login]", err);
       setError(
-        "Error de conexión. En Vercel verificá DATABASE_URL, NEXTAUTH_SECRET y NEXTAUTH_URL (https://apuntado.app)."
+        "Error de conexión. Verificá DATABASE_URL, NEXTAUTH_SECRET y NEXTAUTH_URL en Vercel."
       );
-    } finally {
       setLoading(false);
     }
   }
@@ -155,11 +143,7 @@ function LoginForm() {
           variant="outline"
           className="h-11 w-full rounded-full"
           disabled={loading}
-          onClick={() =>
-            signIn("google", {
-              callbackUrl: searchParams.get("callbackUrl") || "/app",
-            })
-          }
+          onClick={() => signIn("google", { callbackUrl })}
         >
           Continuar con Google
         </Button>

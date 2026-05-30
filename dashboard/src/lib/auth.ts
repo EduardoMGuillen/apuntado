@@ -91,12 +91,14 @@ function buildAuthOptions(): NextAuthOptions {
         }
         return true;
       },
-      async jwt({ token, user }) {
-        if (user?.email) {
-          const dbId = await resolveDbUserId(user.email);
-          if (dbId) {
-            token.id = dbId;
-            token.sub = dbId;
+      async jwt({ token, user, account }) {
+        if (user) {
+          if (account?.provider === "google" && user.email) {
+            const dbId = await resolveDbUserId(user.email);
+            if (dbId) {
+              token.id = dbId;
+              token.sub = dbId;
+            }
           } else if (user.id) {
             token.id = user.id;
             token.sub = user.id;
