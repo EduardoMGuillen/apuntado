@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
+import { GoogleAnalytics } from "@/components/google-analytics";
 import { getSiteUrl, siteConfig } from "@/lib/site";
 
 const inter = Inter({
@@ -109,6 +110,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={cn(inter.variable, display.variable)}>
       <body className="font-sans antialiased">
+        <GoogleAnalytics />
         <Providers>{children}</Providers>
       </body>
     </html>
