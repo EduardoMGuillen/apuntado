@@ -13,14 +13,30 @@ async function vpsFetch(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`VPS error ${res.status}: ${text}`);
+    let message = text;
+    try {
+      const parsed = JSON.parse(text) as { error?: string };
+      if (parsed.error) message = parsed.error;
+    } catch {
+      /* raw text */
+    }
+    if (res.status === 401) {
+      throw new Error("VPS_SECRET no coincide entre Vercel y Fly.");
+    }
+    throw new Error(message || `VPS error ${res.status}`);
   }
 
   return res.json();
 }
 
-export async function startWhatsappSession(businessId: string) {
-  return vpsFetch(`/api/sessions/${businessId}/start`, { method: "POST" });
+export async function startWhatsappSession(
+  businessId: string,
+  options?: { forceQr?: boolean }
+) {
+  return vpsFetch(`/api/sessions/${businessId}/start`, {
+    method: "POST",
+    body: JSON.stringify({ forceQr: options?.forceQr !== false }),
+  });
 }
 
 export async function stopWhatsappSession(businessId: string) {

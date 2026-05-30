@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { startWhatsappSession, getWhatsappQr } from "@/lib/vps";
 
+export const maxDuration = 30;
+
 async function verifyOwner(businessId: string, userId: string) {
   return prisma.business.findFirst({
     where: { id: businessId, ownerId: userId },
@@ -10,7 +12,7 @@ async function verifyOwner(businessId: string, userId: string) {
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const session = await getSession();
@@ -24,7 +26,13 @@ export async function POST(
   }
 
   try {
-    const data = await startWhatsappSession(params.id);
+    const body = await req.json().catch(() => ({}));
+    const forceQr =
+      typeof body === "object" &&
+      body !== null &&
+      (body as { forceQr?: boolean }).forceQr !== false;
+
+    const data = await startWhatsappSession(params.id, { forceQr });
     return NextResponse.json(data);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error al iniciar sesión";

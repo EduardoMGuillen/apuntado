@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+
+export const maxDuration = 15;
 import { prisma } from "@/lib/prisma";
 import { getWhatsappQr } from "@/lib/vps";
 

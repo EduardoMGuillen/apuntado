@@ -78,15 +78,27 @@ export function waitForQr(
   });
 }
 
+function clearAuthFiles(businessId: string): void {
+  const authPath = path.join(AUTH_DIR, businessId);
+  if (fs.existsSync(authPath)) {
+    fs.rmSync(authPath, { recursive: true, force: true });
+  }
+}
+
 export async function startSession(
   businessId: string,
-  io: Server
+  io: Server,
+  options?: { forceQr?: boolean }
 ): Promise<void> {
   const existing = sessions.get(businessId);
   if (existing?.connected) return;
 
   if (existing) {
     teardownSession(businessId);
+  }
+
+  if (options?.forceQr) {
+    clearAuthFiles(businessId);
   }
 
   ensureAuthDir();

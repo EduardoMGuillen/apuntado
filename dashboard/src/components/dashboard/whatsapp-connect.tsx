@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const QR_POLL_ATTEMPTS = 15;
+const QR_POLL_ATTEMPTS = 30;
 const QR_POLL_INTERVAL_MS = 2000;
 
 interface Props {
@@ -141,14 +141,16 @@ export function WhatsappConnectClient({ business }: Props) {
 
       const res = await fetch(`/api/business/${business.id}/whatsapp/start`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ forceQr: true }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         setError(
-          data.error ||
-            "No se pudo iniciar la sesión. Revisá que VPS_URL y VPS_SECRET estén en Vercel."
+          (typeof data.error === "string" ? data.error : null) ||
+            "No se pudo iniciar la sesión. Revisá VPS_URL en Vercel (https://apuntado-vps.fly.dev)."
         );
         finishLoading();
         return;
@@ -180,7 +182,7 @@ export function WhatsappConnectClient({ business }: Props) {
       }
 
       setError(
-        "El QR no llegó a tiempo. Verificá que VPS_SECRET sea igual en Vercel y Fly, luego probá otra vez."
+        "El QR no llegó a tiempo. Probá «Regenerar QR». Si sigue fallando, en Fly revisá los logs (fly logs) o reiniciá la app."
       );
       finishLoading();
     } catch {
