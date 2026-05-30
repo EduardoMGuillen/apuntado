@@ -5,7 +5,8 @@ import { reconcileCustomerPhone } from "@/lib/customer-phone";
 
 export const POST = withVpsAuth(async (req: NextRequest) => {
   const body = await req.json();
-  const { businessId, customerPhone, body: messageBody, fromClient } = body;
+  const { businessId, customerPhone, body: messageBody, fromClient, replyJid } =
+    body;
 
   if (!businessId || !customerPhone || !messageBody) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
@@ -13,12 +14,19 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
 
   const phone = await reconcileCustomerPhone(businessId, customerPhone);
 
+  const jid =
+    typeof replyJid === "string" && replyJid.includes("@") ? replyJid : null;
+
   await prisma.customer.upsert({
     where: {
       whatsappPhone_businessId: { whatsappPhone: phone, businessId },
     },
-    create: { businessId, whatsappPhone: phone },
-    update: {},
+    create: {
+      businessId,
+      whatsappPhone: phone,
+      ...(jid && { whatsappReplyJid: jid }),
+    },
+    update: jid ? { whatsappReplyJid: jid } : {},
   });
 
   const message = await prisma.whatsappMessage.create({

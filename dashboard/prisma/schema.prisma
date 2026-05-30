@@ -112,8 +112,9 @@ model Schedule {
 model Customer {
   id            String        @id @default(cuid())
   businessId    String
-  whatsappPhone String
-  name          String?
+  whatsappPhone     String
+  whatsappReplyJid  String?
+  name              String?
   noShowCount   Int           @default(0)
   notes         String?
   manualTakeover Boolean      @default(false)
@@ -165,6 +166,7 @@ model BusinessSettings {
   id                String   @id @default(cuid())
   businessId        String   @unique
   bookingMode         String   @default("services")
+  conversationTone    String   @default("casual_hn")
   welcomeMenuGreeting String?
   welcomeMenuOptions  String?  @db.Text
   websiteUrl          String?

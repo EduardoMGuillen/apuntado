@@ -82,6 +82,7 @@ function stripConfirmationKeyword(response: string): {
 interface IncomingParams {
   businessId: string;
   customerPhone: string;
+  replyJid: string;
   body: string;
   sock: WASocket;
   io: Server;
@@ -90,11 +91,14 @@ interface IncomingParams {
 export async function handleIncomingMessage({
   businessId,
   customerPhone,
+  replyJid,
   body,
   sock,
   io,
 }: IncomingParams): Promise<void> {
-  await saveIncomingMessage(businessId, customerPhone, body);
+  console.log(`[Bot] Mensaje de ${customerPhone} → ${businessId}`);
+
+  await saveIncomingMessage(businessId, customerPhone, body, replyJid);
 
   io.to(`business:${businessId}`).emit("message:new", {
     businessId,
@@ -107,13 +111,19 @@ export async function handleIncomingMessage({
   const context = await getBusinessContext(businessId, customerPhone);
 
   if (!context.subscriptionActive) {
-    const jid = customerPhone.replace("+", "") + "@s.whatsapp.net";
-    await sock.sendMessage(jid, { text: SUBSCRIPTION_INACTIVE_MESSAGE });
-    await saveOutgoingMessage(businessId, customerPhone, SUBSCRIPTION_INACTIVE_MESSAGE);
+    console.warn(`[Bot] Suscripción inactiva para negocio ${businessId}`);
+    await sock.sendMessage(replyJid, { text: SUBSCRIPTION_INACTIVE_MESSAGE });
+    await saveOutgoingMessage(
+      businessId,
+      customerPhone,
+      SUBSCRIPTION_INACTIVE_MESSAGE,
+      replyJid
+    );
     return;
   }
 
   if (context.manualTakeover) {
+    console.log(`[Bot] Control manual activo para ${customerPhone}`);
     io.to(`business:${businessId}`).emit("takeover:waiting", {
       businessId,
       customerPhone,
@@ -143,12 +153,29 @@ export async function handleIncomingMessage({
       { role: "user", content: body },
     ];
 
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 512,
-      system: context.systemPrompt,
-      messages,
-    });
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 512,
+        system: context.systemPrompt,
+        messages,
+      });
+    } catch (err) {
+      console.error("[Bot] Error Anthropic:", err);
+      reply =
+        "Disculpá, tuve un problemita técnico. ¿Podés escribir de nuevo en un momento? 🙏";
+      const sentText = await sendReplyWithMenu(sock, replyJid, reply, undefined);
+      await saveOutgoingMessage(businessId, customerPhone, sentText, replyJid);
+      io.to(`business:${businessId}`).emit("message:new", {
+        businessId,
+        customerPhone,
+        body: sentText,
+        fromClient: false,
+        createdAt: new Date().toISOString(),
+      });
+      return;
+    }
 
     const textBlock = response.content.find((b) => b.type === "text");
     const rawReply = textBlock?.type === "text" ? textBlock.text : "Disculpá, tuve un problemita. ¿Podés repetir?";
@@ -203,9 +230,9 @@ export async function handleIncomingMessage({
     }
   }
 
-  const jid = customerPhone.replace("+", "") + "@s.whatsapp.net";
-  const sentText = await sendReplyWithMenu(sock, jid, reply, replyMenu);
-  await saveOutgoingMessage(businessId, customerPhone, sentText);
+  const sentText = await sendReplyWithMenu(sock, replyJid, reply, replyMenu);
+  console.log(`[Bot] Respuesta enviada a ${customerPhone}`);
+  await saveOutgoingMessage(businessId, customerPhone, sentText, replyJid);
 
   io.to(`business:${businessId}`).emit("message:new", {
     businessId,

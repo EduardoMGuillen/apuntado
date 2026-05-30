@@ -23,6 +23,10 @@ import {
   WELCOME_MENU_MAX_OPTIONS,
   WELCOME_MENU_MIN_OPTIONS,
 } from "@/lib/welcome-menu";
+import {
+  CONVERSATION_TONES,
+  type ConversationTone,
+} from "@/lib/conversation-tones";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -60,6 +64,7 @@ export type PersonalizationInitial = {
   city: string;
   address: string | null;
   bookingMode: BookingMode;
+  conversationTone: ConversationTone;
   welcomeMenuGreeting: string | null;
   welcomeMenuOptions: string[];
   offerings: OfferingRow[];
@@ -210,6 +215,7 @@ export function PersonalizationForm({
           schedules: form.schedules,
           welcomeMenuGreeting: form.welcomeMenuGreeting?.trim() || null,
           welcomeMenuOptions: welcomeOptions,
+          conversationTone: form.conversationTone,
         }),
       });
 
@@ -345,6 +351,37 @@ export function PersonalizationForm({
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {mode.description}
+              </p>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tono de conversación</CardTitle>
+          <CardDescription>
+            Cómo suena el bot en WhatsApp: formal, casual, breve, etc.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {CONVERSATION_TONES.map((tone) => (
+            <button
+              key={tone.id}
+              type="button"
+              onClick={() =>
+                setForm((prev) => ({ ...prev, conversationTone: tone.id }))
+              }
+              className={cn(
+                "w-full rounded-xl border p-4 text-left transition-colors",
+                form.conversationTone === tone.id
+                  ? "border-accent bg-accent/10 ring-1 ring-accent/30"
+                  : "border-border/80 hover:bg-muted/40"
+              )}
+            >
+              <p className="font-medium">{tone.label}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tone.description}
               </p>
             </button>
           ))}

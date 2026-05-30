@@ -9,6 +9,7 @@ import {
   WELCOME_MENU_MAX_OPTIONS,
   WELCOME_MENU_MIN_OPTIONS,
 } from "@/lib/welcome-menu";
+import { CONVERSATION_TONE_VALUES } from "@/lib/conversation-tones";
 
 const HN_PHONE = /^\+504[39]\d{7}$/;
 
@@ -43,6 +44,7 @@ const patchSchema = z
       .max(WELCOME_MENU_MAX_OPTIONS)
       .nullable()
       .optional(),
+    conversationTone: z.enum(CONVERSATION_TONE_VALUES).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.bookingMode === "inquiries" || data.offerings === undefined) return;
@@ -119,6 +121,9 @@ export async function PATCH(
           data.welcomeMenuOptions && data.welcomeMenuOptions.length > 0
             ? JSON.stringify(data.welcomeMenuOptions)
             : null;
+      }
+      if (data.conversationTone !== undefined) {
+        settingsUpdate.conversationTone = data.conversationTone;
       }
 
       if (Object.keys(settingsUpdate).length > 0) {

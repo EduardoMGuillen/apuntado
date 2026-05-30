@@ -4,10 +4,11 @@ import { sendMessage } from "../services/whatsapp.js";
 export const messageRouter = Router();
 
 messageRouter.post("/send", async (req, res) => {
-  const { businessId, customerPhone, body } = req.body as {
+  const { businessId, customerPhone, body, replyJid } = req.body as {
     businessId?: string;
     customerPhone?: string;
     body?: string;
+    replyJid?: string;
   };
 
   if (!businessId || !customerPhone || !body) {
@@ -16,7 +17,7 @@ messageRouter.post("/send", async (req, res) => {
   }
 
   try {
-    await sendMessage(businessId, customerPhone, body);
+    await sendMessage(businessId, customerPhone, body, replyJid);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ error: String(error) });

@@ -73,11 +73,10 @@ export function buildWelcomeMenuPromptSection(
     .join("\n");
 
   return `MENÚ DE BIENVENIDA (saludo inicial o cuando el cliente escribe hola/buenas sin pedido claro):
-- Mostrá algo como:
-${text}
-
+- NO escribas la lista numerada en el texto del mensaje; el sistema la arma automáticamente.
+- Respondé SOLO con una línea MENU (invisible para el cliente) usando exactamente estas opciones:
+  MENU:{"prompt":${JSON.stringify(text)},"options":[${options.map((o) => JSON.stringify(o)).join(",")}]}
+- Opciones de referencia (mismo sentido, no las copies numeradas en el cuerpo):
 ${numbered}
-- Usá exactamente estas opciones (podés reformular levemente el tono, no el sentido).
-- Incluí MENU:{"options":[${options.map((o) => JSON.stringify(o)).join(",")}]} en el mismo mensaje cuando corresponda.
 - Si el cliente elige una opción por número o texto, atendé según esa intención (agente → ESCALAR_AGENTE si aplica).`;
 }

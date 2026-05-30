@@ -9,6 +9,7 @@ import {
 } from "@/lib/welcome-menu";
 import { mergeSchedules } from "@/lib/schedule-defaults";
 import type { BookingMode } from "@/lib/booking-modes";
+import { parseConversationTone } from "@/lib/conversation-tones";
 
 export default async function PersonalizacionPage({
   params,
@@ -42,7 +43,7 @@ export default async function PersonalizacionPage({
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">Personalización</h1>
         <p className="text-muted-foreground">
-          Negocio, modo del bot, catálogo, horarios y menú de opciones en
+          Negocio, modo del bot, tono, catálogo, horarios y menú de bienvenida en
           WhatsApp.
         </p>
       </div>
@@ -57,6 +58,9 @@ export default async function PersonalizacionPage({
             city: business.city,
             address: business.address,
             bookingMode,
+            conversationTone: parseConversationTone(
+              business.settings?.conversationTone
+            ),
             welcomeMenuGreeting: business.settings?.welcomeMenuGreeting ?? null,
             welcomeMenuOptions:
               storedWelcome.length >= 2

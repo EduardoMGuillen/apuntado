@@ -1,6 +1,7 @@
 export function normalizeWhatsAppPhone(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return trimmed;
+  if (trimmed.startsWith("lid:")) return trimmed;
 
   const digits = trimmed.replace(/\D/g, "");
   if (!digits) return trimmed;

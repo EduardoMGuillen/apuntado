@@ -8,7 +8,9 @@ import makeWASocket, {
 import { Boom } from "@hapi/boom";
 import qrcode from "qrcode-terminal";
 import type { Server } from "socket.io";
-import { extractCustomerPhoneFromMessage } from "../lib/message-phone.js";
+import { extractCustomerIdentityFromMessage } from "../lib/message-phone.js";
+import { getIncomingMessageText } from "../lib/message-body.js";
+import { resolveReplyJid } from "../lib/reply-jid.js";
 import { handleIncomingMessage } from "./bot-handler.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
@@ -234,26 +236,26 @@ export async function startSession(
       if (msg.key.fromMe) continue;
       if (!msg.message) continue;
 
-      const customerPhone = extractCustomerPhoneFromMessage(msg);
-      if (!customerPhone) continue;
+      const identity = extractCustomerIdentityFromMessage(msg);
+      if (!identity) continue;
 
-      const body =
-        msg.message.conversation ||
-        msg.message.extendedTextMessage?.text ||
-        "";
-
-      if (!body.trim()) continue;
+      const body = getIncomingMessageText(msg).trim();
+      if (!body) continue;
 
       try {
         await handleIncomingMessage({
           businessId,
-          customerPhone,
-          body: body.trim(),
+          customerPhone: identity.customerPhone,
+          replyJid: identity.replyJid,
+          body,
           sock,
           io,
         });
       } catch (err) {
-        console.error("[WhatsApp] Error procesando mensaje:", err);
+        console.error(
+          `[WhatsApp] Error procesando mensaje (${identity.customerPhone}):`,
+          err
+        );
       }
     }
   });
@@ -275,16 +277,17 @@ export async function stopSession(businessId: string): Promise<void> {
 export async function sendMessage(
   businessId: string,
   customerPhone: string,
-  body: string
+  body: string,
+  replyJid?: string
 ): Promise<void> {
   const session = sessions.get(businessId);
   if (!session?.connected) {
     throw new Error("Sesión de WhatsApp no conectada");
   }
 
-  const jid = customerPhone.replace("+", "") + "@s.whatsapp.net";
+  const jid = resolveReplyJid(customerPhone, replyJid);
   await session.sock.sendMessage(jid, { text: body });
-  await saveOutgoingMessage(businessId, customerPhone, body);
+  await saveOutgoingMessage(businessId, customerPhone, body, jid);
 }
 
 /** Tras reinicio del VPS, reconectar sesiones guardadas en el volumen. */

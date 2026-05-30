@@ -40,6 +40,24 @@ export function parseReplyMenu(response: string): {
   }
 }
 
+/** Evita duplicar 1. 2. 3. si el modelo ya los incluyó en el texto. */
+function bodyAlreadyShowsMenu(body: string, options: string[]): boolean {
+  const text = body.trim();
+  if (!text) return false;
+
+  const hasNumberedList =
+    /(?:^|\n)\s*1\.\s+\S/.test(text) && /(?:^|\n)\s*2\.\s+\S/.test(text);
+  if (!hasNumberedList) return false;
+
+  const matched = options.filter((opt) => {
+    const snippet = opt.trim().slice(0, 12);
+    if (snippet.length < 4) return false;
+    return text.toLowerCase().includes(snippet.toLowerCase());
+  });
+
+  return matched.length >= Math.min(2, options.length);
+}
+
 function buildTextMenu(body: string, menu: ReplyMenu): string {
   const intro = body.trim() || menu.prompt?.trim() || "";
   const connector =
@@ -61,7 +79,14 @@ export async function sendReplyWithMenu(
   body: string,
   menu: ReplyMenu | undefined
 ): Promise<string> {
-  const text = menu?.options.length ? buildTextMenu(body, menu) : body;
+  let text: string;
+  if (menu?.options.length) {
+    text = bodyAlreadyShowsMenu(body, menu.options)
+      ? body.trim()
+      : buildTextMenu(body, menu);
+  } else {
+    text = body;
+  }
   await sock.sendMessage(jid, { text });
   return text;
 }

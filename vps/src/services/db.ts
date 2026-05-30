@@ -60,22 +60,36 @@ export async function getMessageHistory(
 export async function saveIncomingMessage(
   businessId: string,
   customerPhone: string,
-  body: string
+  body: string,
+  replyJid?: string
 ): Promise<void> {
   await apiFetch("/messages", {
     method: "POST",
-    body: JSON.stringify({ businessId, customerPhone, body, fromClient: true }),
+    body: JSON.stringify({
+      businessId,
+      customerPhone,
+      body,
+      fromClient: true,
+      replyJid,
+    }),
   });
 }
 
 export async function saveOutgoingMessage(
   businessId: string,
   customerPhone: string,
-  body: string
+  body: string,
+  replyJid?: string
 ): Promise<void> {
   await apiFetch("/messages", {
     method: "POST",
-    body: JSON.stringify({ businessId, customerPhone, body, fromClient: false }),
+    body: JSON.stringify({
+      businessId,
+      customerPhone,
+      body,
+      fromClient: false,
+      replyJid,
+    }),
   });
 }
 

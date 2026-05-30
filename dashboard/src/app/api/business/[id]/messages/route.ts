@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsappMessage } from "@/lib/vps";
 import { normalizeWhatsAppPhone } from "@/lib/phone";
+import { reconcileCustomerPhone } from "@/lib/customer-phone";
+import { resolveReplyJid } from "@/lib/reply-jid";
 
 async function verifyOwner(businessId: string, userId: string) {
   return prisma.business.findFirst({
@@ -58,15 +60,17 @@ export async function POST(
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
   }
 
-  const { customerPhone, body } = await req.json();
-  if (!customerPhone || !body) {
+  const { customerPhone: rawPhone, body } = await req.json();
+  if (!rawPhone || !body) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }
+
+  const phone = await reconcileCustomerPhone(params.id, rawPhone);
 
   const customer = await prisma.customer.findUnique({
     where: {
       whatsappPhone_businessId: {
-        whatsappPhone: customerPhone,
+        whatsappPhone: phone,
         businessId: params.id,
       },
     },
@@ -79,18 +83,31 @@ export async function POST(
     );
   }
 
+  const replyJid = resolveReplyJid(phone, customer.whatsappReplyJid);
+
   try {
-    await sendWhatsappMessage(params.id, customerPhone, body);
-    await prisma.whatsappMessage.create({
+    await sendWhatsappMessage(params.id, phone, body, replyJid);
+    const message = await prisma.whatsappMessage.create({
       data: {
         businessId: params.id,
-        customerPhone,
+        customerPhone: phone,
         body,
         fromClient: false,
       },
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      message: {
+        body: message.body,
+        fromClient: message.fromClient,
+        createdAt: message.createdAt.toISOString(),
+      },
+    });
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    console.error("[messages POST]", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
   }
 }

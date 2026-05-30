@@ -1,37 +1,48 @@
-import {
-  isJidGroup,
-  isJidUser,
-  isLidUser,
-  jidNormalizedUser,
-} from "@whiskeysockets/baileys";
+import { isJidGroup, isLidUser, jidNormalizedUser } from "@whiskeysockets/baileys";
 import type { WAMessage } from "@whiskeysockets/baileys";
-import { isHondurasMobile, normalizeWhatsAppPhone } from "./phone.js";
+import { normalizeWhatsAppPhone } from "./phone.js";
 
-export function extractCustomerPhoneFromMessage(
+export interface CustomerIdentity {
+  /** Clave en DB / API (E.164 o lid:…). */
+  customerPhone: string;
+  /** JID de WhatsApp para responder (p. ej. @lid o @s.whatsapp.net). */
+  replyJid: string;
+}
+
+export function extractCustomerIdentityFromMessage(
   msg: WAMessage
-): string | null {
+): CustomerIdentity | null {
   const key = msg.key;
-  if (!key) return null;
+  const remoteJid = key?.remoteJid;
+  if (!remoteJid || isJidGroup(remoteJid)) return null;
+
+  let customerPhone: string | null = null;
 
   if (key.senderPn) {
     const raw = key.senderPn.split("@")[0] ?? key.senderPn;
-    const normalized = normalizeWhatsAppPhone(raw);
-    if (isHondurasMobile(normalized)) return normalized;
+    customerPhone = normalizeWhatsAppPhone(raw);
   }
 
-  const remoteJid = key.remoteJid;
-  if (!remoteJid || isJidGroup(remoteJid)) return null;
+  if (!customerPhone) {
+    if (isLidUser(remoteJid)) {
+      const lidUser = remoteJid.split("@")[0] ?? "unknown";
+      customerPhone = `lid:${lidUser}`;
+    } else {
+      const normalized = jidNormalizedUser(remoteJid);
+      const userPart = normalized?.replace("@s.whatsapp.net", "");
+      if (userPart) {
+        customerPhone = normalizeWhatsAppPhone(userPart);
+      }
+    }
+  }
 
-  if (isLidUser(remoteJid) && !key.senderPn) {
-    console.warn(
-      "[WhatsApp] Mensaje con @lid sin senderPn — no se pudo obtener teléfono"
-    );
+  if (!customerPhone) {
+    console.warn("[WhatsApp] Sin identificador de cliente:", {
+      remoteJid,
+      senderPn: key.senderPn,
+    });
     return null;
   }
 
-  const normalizedJid = jidNormalizedUser(remoteJid);
-  if (!normalizedJid || !isJidUser(normalizedJid)) return null;
-
-  const userPart = normalizedJid.replace("@s.whatsapp.net", "");
-  return normalizeWhatsAppPhone(userPart);
+  return { customerPhone, replyJid: remoteJid };
 }

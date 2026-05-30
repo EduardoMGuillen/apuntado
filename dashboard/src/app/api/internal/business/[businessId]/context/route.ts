@@ -4,6 +4,7 @@ import { verifyVpsSecret } from "@/lib/bot-prompt";
 import { buildAvailabilityText, buildSystemPrompt } from "@/lib/bot-prompt";
 import { fetchWebsiteContent } from "@/lib/website-fetch";
 import { getSubscriptionAccess } from "@/lib/subscription";
+import { reconcileCustomerPhone } from "@/lib/customer-phone";
 import { addDays, startOfDay } from "date-fns";
 
 export async function GET(
@@ -37,9 +38,14 @@ export async function GET(
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
   }
 
+  const normalizedPhone = await reconcileCustomerPhone(businessId, phone);
+
   const customer = await prisma.customer.findUnique({
     where: {
-      whatsappPhone_businessId: { whatsappPhone: phone, businessId },
+      whatsappPhone_businessId: {
+        whatsappPhone: normalizedPhone,
+        businessId,
+      },
     },
   });
 

@@ -14,6 +14,10 @@ import {
 } from "@/lib/bot-playbooks";
 import { buildWebsiteContextSection } from "@/lib/website-fetch";
 import { buildWelcomeMenuPromptSection } from "@/lib/welcome-menu";
+import {
+  buildConversationTonePromptSection,
+  parseConversationTone,
+} from "@/lib/conversation-tones";
 
 const TZ = "America/Tegucigalpa";
 
@@ -38,6 +42,7 @@ type BusinessWithRelations = Business & {
     minAdvanceMinutes: number;
     maxAdvanceDays: number;
     bookingMode: string;
+    conversationTone: string | null;
     welcomeMenuGreeting: string | null;
     welcomeMenuOptions: string | null;
   } | null;
@@ -147,6 +152,9 @@ export function buildSystemPrompt(
     business.settings?.welcomeMenuGreeting,
     business.settings?.welcomeMenuOptions
   );
+  const toneSection = buildConversationTonePromptSection(
+    parseConversationTone(business.settings?.conversationTone)
+  );
 
   const schedules = business.schedules
     .filter((s) => s.isOpen)
@@ -165,9 +173,10 @@ export function buildSystemPrompt(
   const typeLabel = getBusinessTypeLabel(business.type);
 
   return `Sos el asistente de WhatsApp de "${business.name}" (${typeLabel}) en ${business.city}, Honduras.
-Tu trabajo es ayudar a clientes de forma natural, en español hondureño casual (usá "vos", "cheque", "pa'", etc.).
 ${buildModeIntro(bookingMode)}
 Nunca repitas el mismo texto dos veces. Sé breve y amable.
+
+${toneSection}
 
 ${catalogSection}
 ${websiteSection}
@@ -196,13 +205,13 @@ REGLAS:
 - NO enviés mensajes masivos ni promociones
 - Si no hay disponibilidad, ofrecé alternativas
 
-POSIBLES RESPUESTAS (menú):
-- Cuando tenga sentido elegir entre 2 y 6 opciones concretas (servicios, confirmar sí/no, horarios sugeridos), podés agregar al final una línea MENU con JSON. El cliente NO la ve.
-- Variá el texto introductorio y las etiquetas cada vez para que no suenen a bot ni plantilla fija.
-- Reformulá las opciones con tono natural hondureño (ej. "Corte clásico", "Nomás barba", "Combo full", "Mañana temprano", "Sí, confirmá").
-- Formato: MENU:{"options":["Opción 1","Opción 2"]} — opciones cortas (máx ~22 caracteres).
-- NO uses MENU en saludos, despedidas, mensajes triviales ni cuando el cliente ya escribió texto libre claro.
-- Usalo sobre todo para listar ${bookingMode === "menu" ? "ítems del menú" : bookingMode === "inquiries" ? "horarios o confirmaciones" : "servicios"}, confirmar citas o proponer horarios alternativos.
+POSIBLES RESPUESTAS (menú interactivo):
+- Cuando tenga sentido elegir entre 2 y 6 opciones, agregá UNA línea MENU con JSON al final. El cliente NO la ve; el sistema muestra la lista numerada UNA sola vez.
+- NO escribas opciones numeradas (1. 2. 3.) en el texto si vas a usar MENU — solo el mensaje introductorio corto + la línea MENU.
+- Formato: MENU:{"prompt":"texto breve opcional","options":["Opción 1","Opción 2"]} — opciones cortas (máx ~22 caracteres).
+- Variá el prompt y las etiquetas; no repitas plantillas.
+- NO uses MENU en despedidas, mensajes triviales ni cuando el cliente ya escribió texto libre claro.
+- Usalo para listar ${bookingMode === "menu" ? "ítems del menú" : bookingMode === "inquiries" ? "horarios o confirmaciones" : "servicios"}, confirmar citas u horarios alternativos.
 
 ESCALAR A AGENTE HUMANO:
 - Cuando una regla lo indique, o el cliente pida hablar con una persona, esté molesto o la consulta supere tu alcance:

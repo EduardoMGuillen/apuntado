@@ -54,10 +54,11 @@ export async function getWhatsappQr(businessId: string) {
 export async function sendWhatsappMessage(
   businessId: string,
   customerPhone: string,
-  body: string
+  body: string,
+  replyJid?: string
 ) {
   return vpsFetch("/api/messages/send", {
     method: "POST",
-    body: JSON.stringify({ businessId, customerPhone, body }),
+    body: JSON.stringify({ businessId, customerPhone, body, replyJid }),
   });
 }

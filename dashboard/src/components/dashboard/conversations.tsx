@@ -52,6 +52,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sendError, setSendError] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const selectedCustomer = customers.find((c) => c.whatsappPhone === selected);
@@ -151,13 +152,35 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   async function sendReply() {
     if (!selected || !reply.trim()) return;
     setSending(true);
+    setSendError("");
+    const text = reply.trim();
     try {
-      await fetch(`/api/business/${business.id}/messages/send`, {
+      const res = await fetch(`/api/business/${business.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerPhone: selected, body: reply }),
+        body: JSON.stringify({ customerPhone: selected, body: text }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setSendError(data.error || "No se pudo enviar el mensaje");
+        return;
+      }
+      const createdAt =
+        data.message?.createdAt ?? new Date().toISOString();
+      setMessages((prev) => [
+        ...prev,
+        { body: text, fromClient: false, createdAt },
+      ]);
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.whatsappPhone === selected
+            ? { ...c, lastMessage: text, lastMessageAt: createdAt }
+            : c
+        )
+      );
       setReply("");
+    } catch {
+      setSendError("Error de conexión al enviar");
     } finally {
       setSending(false);
     }
@@ -289,7 +312,11 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                 </div>
 
                 {selectedCustomer.manualTakeover && (
-                  <div className="flex gap-2 border-t p-4">
+                  <div className="flex flex-col gap-2 border-t p-4">
+                    {sendError && (
+                      <p className="text-sm text-destructive">{sendError}</p>
+                    )}
+                    <div className="flex gap-2">
                     <Input
                       value={reply}
                       onChange={(e) => setReply(e.target.value)}
@@ -299,6 +326,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                     <Button onClick={sendReply} disabled={sending}>
                       Enviar
                     </Button>
+                    </div>
                   </div>
                 )}
               </>
