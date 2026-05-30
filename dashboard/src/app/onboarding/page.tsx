@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OnboardingStepper } from "@/components/onboarding/stepper";
 import { BUSINESS_TYPE_CATEGORIES, getBusinessTypeLabel } from "@/lib/business-types";
+import {
+  BOOKING_MODES,
+  getBookingModeConfig,
+  getSuggestedBookingMode,
+  type BookingMode,
+} from "@/lib/booking-modes";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 
@@ -25,50 +31,85 @@ const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const selectClass =
   "flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+type Offering = {
+  name: string;
+  durationMin?: number;
+  priceHNL?: number;
+};
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [modeTouched, setModeTouched] = useState(false);
 
   const [name, setName] = useState("");
   const [type, setType] = useState("salon");
+  const [bookingMode, setBookingMode] = useState<BookingMode>("services");
   const [phone, setPhone] = useState("+504");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
-  const [serviceName, setServiceName] = useState("");
-  const [serviceDuration, setServiceDuration] = useState(30);
-  const [servicePrice, setServicePrice] = useState(150);
-  const [services, setServices] = useState<
-    { name: string; durationMin: number; priceHNL: number }[]
-  >([]);
+  const [itemName, setItemName] = useState("");
+  const [itemDuration, setItemDuration] = useState(30);
+  const [itemPrice, setItemPrice] = useState<number | "">(150);
+  const [offerings, setOfferings] = useState<Offering[]>([]);
 
   const [schedules] = useState(DEFAULT_SCHEDULE);
 
-  const canContinueStep0 = name.trim().length >= 2 && phone.length >= 8 && city.trim().length >= 2;
+  const modeConfig = getBookingModeConfig(bookingMode);
 
-  function addService() {
-    if (!serviceName.trim()) return;
-    setServices([
-      ...services,
-      {
-        name: serviceName.trim(),
-        durationMin: serviceDuration,
-        priceHNL: servicePrice,
-      },
-    ]);
-    setServiceName("");
-    setServiceDuration(30);
-    setServicePrice(150);
+  useEffect(() => {
+    if (!modeTouched) {
+      setBookingMode(getSuggestedBookingMode(type));
+    }
+  }, [type, modeTouched]);
+
+  const canContinueStep0 =
+    name.trim().length >= 2 && phone.length >= 8 && city.trim().length >= 2;
+
+  const canContinueStep1 =
+    bookingMode === "inquiries" || offerings.length > 0;
+
+  function addOffering() {
+    if (!itemName.trim()) return;
+
+    const entry: Offering = { name: itemName.trim() };
+
+    if (bookingMode === "services") {
+      entry.durationMin = itemDuration;
+      entry.priceHNL = itemPrice === "" ? 0 : itemPrice;
+    } else if (bookingMode === "menu") {
+      entry.priceHNL = itemPrice === "" ? 0 : itemPrice;
+    }
+
+    setOfferings([...offerings, entry]);
+    setItemName("");
+    setItemDuration(30);
+    setItemPrice(bookingMode === "menu" ? "" : 150);
   }
 
-  function removeService(index: number) {
-    setServices(services.filter((_, i) => i !== index));
+  function removeOffering(index: number) {
+    setOfferings(offerings.filter((_, i) => i !== index));
+  }
+
+  function formatOfferingSummary(item: Offering) {
+    if (bookingMode === "menu") {
+      return item.priceHNL && item.priceHNL > 0
+        ? `L.${item.priceHNL.toFixed(0)}`
+        : "Consultar precio";
+    }
+    return `${item.durationMin ?? 30} min · L.${(item.priceHNL ?? 0).toFixed(0)}`;
   }
 
   async function handleFinish() {
-    if (services.length === 0) {
-      setError("Agregá al menos un servicio");
+    if (!canContinueStep1) {
+      setError(
+        bookingMode === "menu"
+          ? "Agregá al menos un ítem al menú"
+          : "Agregá al menos un servicio"
+      );
       setStep(1);
       return;
     }
@@ -85,7 +126,9 @@ export default function OnboardingPage() {
         phone,
         city,
         address: address || undefined,
-        services,
+        bookingMode,
+        websiteUrl: websiteUrl.trim() || undefined,
+        offerings,
         schedules,
       }),
     });
@@ -122,7 +165,7 @@ export default function OnboardingPage() {
           <Logo size={36} />
         </div>
 
-        <OnboardingStepper current={step} />
+        <OnboardingStepper current={step} stepTwoLabel={modeConfig.short} />
 
         <div className="glass-card flex-1 rounded-2xl p-5 sm:p-8">
           {step === 0 && (
@@ -169,6 +212,39 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label>¿Cómo te escriben por WhatsApp?</Label>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {BOOKING_MODES.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          setModeTouched(true);
+                          setBookingMode(mode.id);
+                          setOfferings([]);
+                          setItemPrice(mode.id === "menu" ? "" : 150);
+                        }}
+                        className={cn(
+                          "rounded-xl border p-3 text-left transition-all",
+                          bookingMode === mode.id
+                            ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                            : "border-border/80 bg-background hover:border-primary/30"
+                        )}
+                      >
+                        <span className="text-lg">{mode.icon}</span>
+                        <p className="mt-1 text-sm font-semibold">{mode.label}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                          {mode.examples}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {modeConfig.description}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="business-phone">WhatsApp del negocio</Label>
                   <Input
                     id="business-phone"
@@ -204,6 +280,22 @@ export default function OnboardingPage() {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="business-website">Sitio web (opcional)</Label>
+                  <Input
+                    id="business-website"
+                    className="h-11"
+                    type="url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://minegocio.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si tenés web, el bot puede leer eventos, promos y más info
+                    para responder mejor.
+                  </p>
+                </div>
               </div>
 
               <Button
@@ -216,89 +308,154 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && bookingMode === "inquiries" && (
             <div className="space-y-6">
               <div>
                 <h1 className="font-display text-xl font-bold sm:text-2xl">
-                  Servicios
+                  Consultas y citas
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  ¿Qué servicios ofrecés? Agregá al menos uno.
+                  No necesitás cargar un catálogo ahora. El bot agendará consultas
+                  generales y vos podés personalizarlo después.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border/80 bg-muted/30 p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">¿Qué hará el bot?</p>
+                <ul className="mt-2 list-inside list-disc space-y-1">
+                  <li>Responder dudas en tono natural</li>
+                  <li>Agendar citas según tu horario</li>
+                  <li>Preguntar el motivo de la consulta si hace falta</li>
+                </ul>
+                <p className="mt-3">
+                  Podés agregar servicios específicos más adelante en Configuración.
+                </p>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 rounded-full"
+                  onClick={() => setStep(0)}
+                >
+                  Atrás
+                </Button>
+                <Button
+                  className="h-11 flex-1 rounded-full font-semibold"
+                  onClick={() => setStep(2)}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 1 && bookingMode !== "inquiries" && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-display text-xl font-bold sm:text-2xl">
+                  {bookingMode === "menu" ? "Tu menú" : "Tus servicios"}
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {bookingMode === "menu"
+                    ? "Agregá platillos o productos. El bot los mostrará por WhatsApp."
+                    : "Agregá al menos un servicio con duración y precio."}
                 </p>
               </div>
 
               <div className="space-y-4 rounded-xl border border-border/80 bg-muted/30 p-4">
                 <div className="space-y-2">
-                  <Label htmlFor="service-name">Nombre del servicio</Label>
+                  <Label htmlFor="item-name">
+                    {bookingMode === "menu" ? "Nombre del ítem" : "Nombre del servicio"}
+                  </Label>
                   <Input
-                    id="service-name"
+                    id="item-name"
                     className="h-11 bg-background"
-                    value={serviceName}
-                    onChange={(e) => setServiceName(e.target.value)}
-                    placeholder="Corte de cabello"
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
+                    placeholder={
+                      bookingMode === "menu" ? "Baleada sencilla" : "Corte de cabello"
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
-                        addService();
+                        addOffering();
                       }
                     }}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+
+                <div
+                  className={cn(
+                    "grid gap-3",
+                    bookingMode === "services" ? "grid-cols-2" : "grid-cols-1"
+                  )}
+                >
+                  {bookingMode === "services" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="item-duration">Duración (min)</Label>
+                      <Input
+                        id="item-duration"
+                        type="number"
+                        min={15}
+                        className="h-11 bg-background"
+                        value={itemDuration}
+                        onChange={(e) =>
+                          setItemDuration(Number(e.target.value))
+                        }
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="service-duration">Duración (min)</Label>
+                    <Label htmlFor="item-price">
+                      Precio (L.){bookingMode === "menu" ? " — opcional" : ""}
+                    </Label>
                     <Input
-                      id="service-duration"
-                      type="number"
-                      min={15}
-                      className="h-11 bg-background"
-                      value={serviceDuration}
-                      onChange={(e) =>
-                        setServiceDuration(Number(e.target.value))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="service-price">Precio (L.)</Label>
-                    <Input
-                      id="service-price"
+                      id="item-price"
                       type="number"
                       min={0}
                       className="h-11 bg-background"
-                      value={servicePrice}
-                      onChange={(e) => setServicePrice(Number(e.target.value))}
+                      value={itemPrice}
+                      onChange={(e) =>
+                        setItemPrice(
+                          e.target.value === "" ? "" : Number(e.target.value)
+                        )
+                      }
+                      placeholder={bookingMode === "menu" ? "Dejar vacío si varía" : undefined}
                     />
                   </div>
                 </div>
+
                 <Button
                   type="button"
                   variant="outline"
                   className="h-11 w-full rounded-full"
-                  onClick={addService}
-                  disabled={!serviceName.trim()}
+                  onClick={addOffering}
+                  disabled={!itemName.trim()}
                 >
-                  Agregar servicio
+                  {bookingMode === "menu" ? "Agregar al menú" : "Agregar servicio"}
                 </Button>
               </div>
 
-              {services.length > 0 && (
+              {offerings.length > 0 && (
                 <ul className="divide-y rounded-xl border border-border/80 bg-background">
-                  {services.map((s, i) => (
+                  {offerings.map((item, i) => (
                     <li
-                      key={`${s.name}-${i}`}
+                      key={`${item.name}-${i}`}
                       className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
                     >
                       <div className="min-w-0">
-                        <p className="truncate font-medium">{s.name}</p>
+                        <p className="truncate font-medium">{item.name}</p>
                         <p className="text-muted-foreground">
-                          {s.durationMin} min · L.{s.priceHNL.toFixed(2)}
+                          {formatOfferingSummary(item)}
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeService(i)}
+                        onClick={() => removeOffering(i)}
                         className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Eliminar servicio"
+                        aria-label="Eliminar"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -319,7 +476,7 @@ export default function OnboardingPage() {
                 <Button
                   className="h-11 flex-1 rounded-full font-semibold"
                   onClick={() => setStep(2)}
-                  disabled={services.length === 0}
+                  disabled={!canContinueStep1}
                 >
                   Siguiente
                 </Button>
@@ -351,22 +508,42 @@ export default function OnboardingPage() {
                   {address && (
                     <p className="text-muted-foreground">{address}</p>
                   )}
+                  {websiteUrl.trim() && (
+                    <p className="text-muted-foreground">{websiteUrl.trim()}</p>
+                  )}
                 </div>
 
                 <div className="border-t border-border/60 pt-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Servicios ({services.length})
+                    Modo del bot
                   </p>
-                  <ul className="mt-2 space-y-1">
-                    {services.map((s, i) => (
-                      <li key={i} className="flex justify-between gap-2">
-                        <span>{s.name}</span>
-                        <span className="shrink-0 text-muted-foreground">
-                          {s.durationMin} min · L.{s.priceHNL.toFixed(0)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mt-1 font-medium">{modeConfig.label}</p>
+                </div>
+
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {bookingMode === "inquiries"
+                      ? "Catálogo"
+                      : bookingMode === "menu"
+                        ? `Menú (${offerings.length})`
+                        : `Servicios (${offerings.length})`}
+                  </p>
+                  {bookingMode === "inquiries" ? (
+                    <p className="mt-1 text-muted-foreground">
+                      Consultas generales — sin catálogo fijo
+                    </p>
+                  ) : (
+                    <ul className="mt-2 space-y-1">
+                      {offerings.map((item, i) => (
+                        <li key={i} className="flex justify-between gap-2">
+                          <span>{item.name}</span>
+                          <span className="shrink-0 text-muted-foreground">
+                            {formatOfferingSummary(item)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 <div className="border-t border-border/60 pt-4">
@@ -420,7 +597,7 @@ export default function OnboardingPage() {
         </div>
 
         <p className="mt-6 pb-4 text-center text-xs text-muted-foreground">
-          Podés editar horarios y más opciones después en Configuración
+          Podés editar menú, servicios y horarios después en Configuración
         </p>
       </div>
     </div>

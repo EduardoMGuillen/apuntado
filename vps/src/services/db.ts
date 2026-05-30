@@ -92,6 +92,25 @@ export async function createAppointmentFromBot(data: {
   });
 }
 
+export interface EscalateResult {
+  ok: boolean;
+  notifyPhones: string[];
+  alertMessage: string;
+  businessName: string;
+}
+
+export async function escalateToAgent(data: {
+  businessId: string;
+  customerPhone: string;
+  customerMessage: string;
+  reason?: string;
+}): Promise<EscalateResult> {
+  return apiFetch("/escalate", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
 export async function setSessionConnected(
   businessId: string,
   connected: boolean

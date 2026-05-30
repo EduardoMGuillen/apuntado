@@ -7,8 +7,13 @@ import {
   saveIncomingMessage,
   saveOutgoingMessage,
   createAppointmentFromBot,
+  escalateToAgent,
 } from "./db.js";
 import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
+import { stripEscalationKeyword } from "../lib/escalation.js";
+
+const DEFAULT_ESCALATION_REPLY =
+  "Gracias por escribir. Un agente de nuestro equipo se conectará contigo lo antes posible. 🙏";
 
 const SUBSCRIPTION_INACTIVE_MESSAGE =
   "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
@@ -138,8 +143,10 @@ export async function handleIncomingMessage({
     const rawReply = textBlock?.type === "text" ? textBlock.text : "Disculpá, tuve un problemita. ¿Podés repetir?";
 
     const { clean, confirmed, appointmentData } = stripConfirmationKeyword(rawReply);
-    const parsedMenu = parseReplyMenu(clean);
-    reply = parsedMenu.clean;
+    const { clean: afterEscalation, escalate, reason } =
+      stripEscalationKeyword(clean);
+    const parsedMenu = parseReplyMenu(afterEscalation);
+    reply = parsedMenu.clean || (escalate ? DEFAULT_ESCALATION_REPLY : afterEscalation);
     replyMenu = parsedMenu.menu;
 
     if (confirmed && appointmentData) {
@@ -156,6 +163,30 @@ export async function handleIncomingMessage({
         });
       } catch (err) {
         console.error("[Bot] Error creando cita:", err);
+      }
+    }
+
+    if (escalate) {
+      try {
+        const escalation = await escalateToAgent({
+          businessId,
+          customerPhone,
+          customerMessage: body,
+          reason,
+        });
+
+        for (const phone of escalation.notifyPhones) {
+          const teamJid = phone.replace("+", "") + "@s.whatsapp.net";
+          await sock.sendMessage(teamJid, { text: escalation.alertMessage });
+        }
+
+        io.to(`business:${businessId}`).emit("takeover:waiting", {
+          businessId,
+          customerPhone,
+          escalated: true,
+        });
+      } catch (err) {
+        console.error("[Bot] Error escalando a agente:", err);
       }
     }
   }

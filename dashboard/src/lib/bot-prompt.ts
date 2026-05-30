@@ -3,6 +3,16 @@ import { addDays, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { Business, Service, Schedule, Employee } from "@prisma/client";
 import { getBusinessTypeLabel } from "@/lib/business-types";
+import {
+  DEFAULT_INQUIRY_SERVICE,
+  getBookingModeConfig,
+  type BookingMode,
+} from "@/lib/booking-modes";
+import {
+  buildPlaybooksPromptSection,
+  parseBotPlaybooks,
+} from "@/lib/bot-playbooks";
+import { buildWebsiteContextSection } from "@/lib/website-fetch";
 
 const TZ = "America/Tegucigalpa";
 
@@ -20,8 +30,62 @@ type BusinessWithRelations = Business & {
   services: Service[];
   schedules: Schedule[];
   employees: Employee[];
-  settings: { botInstructions: string | null; minAdvanceMinutes: number; maxAdvanceDays: number } | null;
+  settings: {
+    botInstructions: string | null;
+    botPlaybooks: string | null;
+    websiteUrl: string | null;
+    minAdvanceMinutes: number;
+    maxAdvanceDays: number;
+    bookingMode: string;
+  } | null;
+  websiteContent?: { url: string; text: string } | null;
 };
+
+function formatCatalogLine(service: Service, mode: BookingMode): string {
+  const price = formatPriceHNL(service.priceHNL.toString());
+  const priceNum = parseFloat(service.priceHNL.toString());
+
+  if (mode === "menu") {
+    return priceNum > 0 ? `- ${service.name}: ${price}` : `- ${service.name}`;
+  }
+
+  return `- ${service.name}: ${service.durationMin} min, ${price}`;
+}
+
+function buildCatalogSection(services: Service[], mode: BookingMode): string {
+  const active = services.filter((s) => s.isActive);
+
+  if (mode === "inquiries") {
+    return `MODO CONSULTAS (sin catálogo fijo):
+- Ayudá a agendar citas o consultas generales.
+- Para confirmar una cita usá el servicio "${DEFAULT_INQUIRY_SERVICE.name}" en CITA_DATA.
+- Preguntá brevemente el motivo si hace falta, sin ser invasivo.`;
+  }
+
+  if (mode === "menu") {
+    const lines = active.map((s) => formatCatalogLine(s, mode)).join("\n");
+    return `MENÚ / CATÁLOGO:
+${lines || "Menú pendiente de configurar."}
+- Mostrá opciones cuando pregunten qué hay, precios o recomendaciones.
+- Usá MENU con frecuencia para listar platillos o productos (variá el texto cada vez).
+- Para reservas de mesa o pedidos, confirmá con CITA_DATA usando el ítem más cercano o "${DEFAULT_INQUIRY_SERVICE.name}" si es reserva general.`;
+  }
+
+  const lines = active.map((s) => formatCatalogLine(s, mode)).join("\n");
+  return `SERVICIOS:
+${lines || "No hay servicios configurados aún."}`;
+}
+
+function buildModeIntro(mode: BookingMode): string {
+  const config = getBookingModeConfig(mode);
+  if (mode === "menu") {
+    return `Tu foco principal es mostrar el menú/catálogo y ayudar con reservas o pedidos cuando aplique.`;
+  }
+  if (mode === "inquiries") {
+    return `Tu foco es agendar consultas y responder dudas; no tenés un catálogo fijo de servicios.`;
+  }
+  return `Tu foco es agendar citas según los servicios disponibles (${config.label.toLowerCase()}).`;
+}
 
 export function formatPriceHNL(amount: number | string): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
@@ -61,11 +125,20 @@ export function buildAvailabilityText(
   return lines.join("\n");
 }
 
-export function buildSystemPrompt(business: BusinessWithRelations, availability: string): string {
-  const services = business.services
-    .filter((s) => s.isActive)
-    .map((s) => `- ${s.name}: ${s.durationMin} min, ${formatPriceHNL(s.priceHNL.toString())}`)
-    .join("\n");
+export function buildSystemPrompt(
+  business: BusinessWithRelations,
+  availability: string
+): string {
+  const bookingMode = (business.settings?.bookingMode ?? "services") as BookingMode;
+  const catalogSection = buildCatalogSection(business.services, bookingMode);
+  const customPlaybooks = parseBotPlaybooks(business.settings?.botPlaybooks);
+  const websiteContent = business.websiteContent ?? null;
+  const playbooksSection = buildPlaybooksPromptSection(
+    bookingMode,
+    customPlaybooks,
+    !!websiteContent
+  );
+  const websiteSection = buildWebsiteContextSection(websiteContent);
 
   const schedules = business.schedules
     .filter((s) => s.isOpen)
@@ -78,17 +151,20 @@ export function buildSystemPrompt(business: BusinessWithRelations, availability:
     .join("\n");
 
   const customInstructions = business.settings?.botInstructions
-    ? `\nInstrucciones adicionales del negocio:\n${business.settings.botInstructions}`
+    ? `\nNOTAS ADICIONALES DEL NEGOCIO:\n${business.settings.botInstructions}`
     : "";
 
   const typeLabel = getBusinessTypeLabel(business.type);
 
   return `Sos el asistente de WhatsApp de "${business.name}" (${typeLabel}) en ${business.city}, Honduras.
-Tu trabajo es ayudar a clientes a agendar citas de forma natural, en español hondureño casual (usá "vos", "cheque", "pa'", etc.).
+Tu trabajo es ayudar a clientes de forma natural, en español hondureño casual (usá "vos", "cheque", "pa'", etc.).
+${buildModeIntro(bookingMode)}
 Nunca repitas el mismo texto dos veces. Sé breve y amable.
 
-SERVICIOS:
-${services || "No hay servicios configurados aún."}
+${catalogSection}
+${websiteSection}
+
+${playbooksSection}
 
 HORARIO SEMANAL:
 ${schedules || "Horario no configurado."}
@@ -116,7 +192,14 @@ POSIBLES RESPUESTAS (menú):
 - Reformulá las opciones con tono natural hondureño (ej. "Corte clásico", "Nomás barba", "Combo full", "Mañana temprano", "Sí, confirmá").
 - Formato: MENU:{"options":["Opción 1","Opción 2"]} — opciones cortas (máx ~22 caracteres).
 - NO uses MENU en saludos, despedidas, mensajes triviales ni cuando el cliente ya escribió texto libre claro.
-- Usalo sobre todo para listar servicios, confirmar citas o proponer horarios alternativos.
+- Usalo sobre todo para listar ${bookingMode === "menu" ? "ítems del menú" : bookingMode === "inquiries" ? "horarios o confirmaciones" : "servicios"}, confirmar citas o proponer horarios alternativos.
+
+ESCALAR A AGENTE HUMANO:
+- Cuando una regla lo indique, o el cliente pida hablar con una persona, esté molesto o la consulta supere tu alcance:
+  1. Respondé amable que un agente del equipo se conectará lo antes posible.
+  2. Agregá al final ESCALAR_AGENTE (invisible para el cliente).
+  3. Opcional en la línea siguiente: ESCALAR_DATA:{"reason":"motivo breve en español"}
+- NO uses ESCALAR_AGENTE si podés resolver vos mismo con la info disponible.
 ${customInstructions}`.trim();
 }
 

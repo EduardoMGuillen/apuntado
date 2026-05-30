@@ -3,20 +3,26 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const STEPS = [
-  { label: "Negocio", short: "Negocio" },
-  { label: "Servicios", short: "Servicios" },
-  { label: "Confirmar", short: "Listo" },
-];
+export function OnboardingStepper({
+  current,
+  stepTwoLabel = "Oferta",
+}: {
+  current: number;
+  stepTwoLabel?: string;
+}) {
+  const steps = [
+    { label: "Negocio", short: "Negocio" },
+    { label: stepTwoLabel, short: stepTwoLabel },
+    { label: "Confirmar", short: "Listo" },
+  ];
 
-export function OnboardingStepper({ current }: { current: number }) {
   return (
     <div className="mb-8 w-full">
       <p className="mb-4 text-center text-sm text-muted-foreground sm:hidden">
-        Paso {current + 1} de {STEPS.length}
+        Paso {current + 1} de {steps.length}
       </p>
       <ol className="flex w-full items-start justify-center">
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const done = i < current;
           const active = i === current;
 
@@ -54,7 +60,7 @@ export function OnboardingStepper({ current }: { current: number }) {
                 </span>
               </div>
 
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div
                   className={cn(
                     "mx-1 mt-[18px] hidden h-0.5 min-w-[1.5rem] flex-1 sm:mx-2 sm:block",

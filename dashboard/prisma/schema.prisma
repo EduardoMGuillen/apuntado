@@ -88,12 +88,13 @@ model Service {
 }
 
 model Employee {
-  id           String        @id @default(cuid())
-  businessId   String
-  name         String
-  isActive     Boolean       @default(true)
-  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
+  id            String        @id @default(cuid())
+  businessId    String
+  name          String
+  whatsappPhone String?
+  isActive      Boolean       @default(true)
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
 }
 
 model Schedule {
@@ -163,10 +164,14 @@ model WhatsappSession {
 model BusinessSettings {
   id                String   @id @default(cuid())
   businessId        String   @unique
+  bookingMode       String   @default("services")
+  websiteUrl        String?
+  botPlaybooks      String?  @db.Text
   minAdvanceMinutes Int      @default(120)
   maxAdvanceDays    Int      @default(30)
   reminder24h       Boolean  @default(true)
-  botInstructions   String?  @db.Text
+  notifyPhone         String?
+  botInstructions     String?  @db.Text
   business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 

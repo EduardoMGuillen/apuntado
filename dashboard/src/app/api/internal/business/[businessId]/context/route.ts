@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyVpsSecret } from "@/lib/bot-prompt";
 import { buildAvailabilityText, buildSystemPrompt } from "@/lib/bot-prompt";
+import { fetchWebsiteContent } from "@/lib/website-fetch";
 import { getSubscriptionAccess } from "@/lib/subscription";
 import { addDays, startOfDay } from "date-fns";
 
@@ -53,7 +54,11 @@ export async function GET(
   });
 
   const availability = buildAvailabilityText(business.schedules, appointments);
-  const systemPrompt = buildSystemPrompt(business, availability);
+  const websiteContent = await fetchWebsiteContent(business.settings?.websiteUrl);
+  const systemPrompt = buildSystemPrompt(
+    { ...business, websiteContent },
+    availability
+  );
   const subscriptionAccess = getSubscriptionAccess(business.subscription);
 
   return NextResponse.json({

@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { parseBotPlaybooks } from "@/lib/bot-playbooks";
+import { isProPlan } from "@/lib/team-notify";
 import { getSubscriptionAccess } from "@/lib/subscription";
 
 export default async function ConfigPage({
@@ -31,6 +33,10 @@ export default async function ConfigPage({
       subscription: true,
       settings: true,
       services: { where: { isActive: true } },
+      employees: {
+        where: { isActive: true, whatsappPhone: { not: null } },
+        orderBy: { name: "asc" },
+      },
       schedules: { orderBy: { dayOfWeek: "asc" } },
     },
   });
@@ -53,6 +59,10 @@ export default async function ConfigPage({
     minAdvanceMinutes: 120,
     maxAdvanceDays: 30,
     reminder24h: true,
+    websiteUrl: null as string | null,
+    notifyPhone: null as string | null,
+    teamMembers: [] as { id?: string; name: string; whatsappPhone: string }[],
+    botPlaybooks: [] as ReturnType<typeof parseBotPlaybooks>,
     botInstructions: null as string | null,
   };
 
@@ -75,6 +85,7 @@ export default async function ConfigPage({
 
         <SettingsForm
           businessId={business.id}
+          isPro={isProPlan(business.subscription)}
           initial={{
             minAdvanceMinutes:
               business.settings?.minAdvanceMinutes ?? defaultSettings.minAdvanceMinutes,
@@ -82,6 +93,14 @@ export default async function ConfigPage({
               business.settings?.maxAdvanceDays ?? defaultSettings.maxAdvanceDays,
             reminder24h:
               business.settings?.reminder24h ?? defaultSettings.reminder24h,
+            websiteUrl: business.settings?.websiteUrl ?? null,
+            notifyPhone: business.settings?.notifyPhone ?? null,
+            teamMembers: business.employees.map((employee) => ({
+              id: employee.id,
+              name: employee.name,
+              whatsappPhone: employee.whatsappPhone || "",
+            })),
+            botPlaybooks: parseBotPlaybooks(business.settings?.botPlaybooks),
             botInstructions: business.settings?.botInstructions ?? null,
           }}
         />
