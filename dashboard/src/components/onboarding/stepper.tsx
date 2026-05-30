@@ -3,6 +3,8 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const CIRCLE_SIZE = "size-10"; // 2.5rem — connector aligns to center (mt-5)
+
 export function OnboardingStepper({
   current,
   stepTwoLabel = "Oferta",
@@ -21,20 +23,27 @@ export function OnboardingStepper({
       <p className="mb-4 text-center text-sm text-muted-foreground sm:hidden">
         Paso {current + 1} de {steps.length}
       </p>
-      <ol className="flex w-full items-start justify-center">
+
+      <div
+        className="mx-auto flex w-full max-w-md items-start sm:max-w-lg"
+        role="list"
+        aria-label="Pasos del registro"
+      >
         {steps.map((step, i) => {
           const done = i < current;
           const active = i === current;
+          const isLast = i === steps.length - 1;
 
           return (
-            <li
-              key={step.label}
-              className="flex min-w-0 flex-1 items-start last:flex-none last:max-w-[33%]"
-            >
-              <div className="flex w-full min-w-0 flex-col items-center gap-2">
+            <div key={step.label} className="flex min-w-0 flex-1 items-start">
+              <div
+                className="flex w-full min-w-0 flex-col items-center gap-2"
+                role="listitem"
+              >
                 <div
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition-all sm:h-10 sm:w-10",
+                    CIRCLE_SIZE,
+                    "flex shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold leading-none tabular-nums transition-all",
                     done && "border-accent bg-accent text-accent-foreground",
                     active &&
                       "border-primary bg-primary text-primary-foreground shadow-glow",
@@ -44,14 +53,14 @@ export function OnboardingStepper({
                   )}
                 >
                   {done ? (
-                    <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Check className="size-5 shrink-0" strokeWidth={2.5} />
                   ) : (
-                    i + 1
+                    <span>{i + 1}</span>
                   )}
                 </div>
                 <span
                   className={cn(
-                    "w-full truncate px-0.5 text-center text-[11px] font-medium sm:text-sm",
+                    "w-full px-1 text-center text-[11px] font-medium leading-tight sm:text-sm",
                     active ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
@@ -60,19 +69,20 @@ export function OnboardingStepper({
                 </span>
               </div>
 
-              {i < steps.length - 1 && (
+              {!isLast && (
                 <div
                   className={cn(
-                    "mx-1 mt-[18px] hidden h-0.5 min-w-[1.5rem] flex-1 sm:mx-2 sm:block",
+                    "mt-5 h-0.5 min-w-[1.25rem] flex-1 shrink",
+                    "mx-2 sm:mx-3",
                     i < current ? "bg-accent" : "bg-border"
                   )}
                   aria-hidden
                 />
               )}
-            </li>
+            </div>
           );
         })}
-      </ol>
+      </div>
     </div>
   );
 }
