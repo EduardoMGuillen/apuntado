@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardShell } from "@/components/dashboard/shell";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { AlertBanner } from "@/components/dashboard/alert-banner";
 import { getSubscriptionAccess } from "@/lib/subscription";
 
 export default async function BusinessDashboard({
@@ -47,35 +49,28 @@ export default async function BusinessDashboard({
 
   return (
     <DashboardShell business={business}>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{business.name}</h1>
-          <p className="text-muted-foreground">{business.city}</p>
-        </div>
+      <div className="space-y-8">
+        <PageHeader title={business.name} description={business.city ?? undefined} />
 
         {!access.active && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm">
-            Tu bot está pausado porque la prueba o suscripción expiró.{" "}
-            <Link
-              href={`/app/${business.id}/suscripcion`}
-              className="font-medium text-primary underline"
-            >
-              Activar plan →
-            </Link>
-          </div>
+          <AlertBanner
+            variant="danger"
+            href={`/app/${business.id}/suscripcion`}
+            linkLabel="Activar plan →"
+          >
+            Tu bot está pausado porque la prueba o suscripción expiró.
+          </AlertBanner>
         )}
 
         {access.reason === "trial" && access.trialEndsAt && (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
+          <AlertBanner
+            variant="warning"
+            href={`/app/${business.id}/suscripcion`}
+            linkLabel="Ver planes"
+          >
             Prueba gratis hasta{" "}
-            {access.trialEndsAt.toLocaleDateString("es-HN", { dateStyle: "long" })}.{" "}
-            <Link
-              href={`/app/${business.id}/suscripcion`}
-              className="font-medium text-primary underline"
-            >
-              Ver planes
-            </Link>
-          </div>
+            {access.trialEndsAt.toLocaleDateString("es-HN", { dateStyle: "long" })}.
+          </AlertBanner>
         )}
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -83,11 +78,15 @@ export default async function BusinessDashboard({
             label="Citas hoy"
             value={todayAppointments}
             href={`/app/${business.id}/citas`}
+            accent="primary"
           />
           <StatCard
             label="WhatsApp"
-            value={business.whatsappSession?.connected ? "Conectado" : "Desconectado"}
+            value={
+              business.whatsappSession?.connected ? "Conectado" : "Desconectado"
+            }
             href={`/app/${business.id}/whatsapp`}
+            accent="accent"
           />
           <StatCard
             label="Control manual"
@@ -97,25 +96,5 @@ export default async function BusinessDashboard({
         </div>
       </div>
     </DashboardShell>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string | number;
-  href: string;
-}) {
-  return (
-    <a
-      href={href}
-      className="rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-muted/50"
-    >
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
-    </a>
   );
 }

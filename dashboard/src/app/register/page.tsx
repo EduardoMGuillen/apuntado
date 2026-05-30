@@ -4,18 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Logo } from "@/components/logo";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -58,66 +50,67 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mb-4 flex justify-center">
-            <Logo size={48} showText={false} />
-          </div>
-          <CardTitle>Creá tu cuenta</CardTitle>
-          <CardDescription>14 días gratis — solo pedimos tarjeta, sin cobro al inicio</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={8}
-                required
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creando cuenta..." : "Crear cuenta"}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              ¿Ya tenés cuenta?{" "}
-              <Link href="/login" className="text-primary hover:underline">
-                Iniciá sesión
-              </Link>
-            </p>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+    <AuthLayout
+      title="Creá tu cuenta"
+      subtitle="14 días gratis — tarjeta requerida, sin cobro al inicio"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="glass-card space-y-5 rounded-2xl p-6 sm:p-8"
+      >
+        {error && (
+          <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="name">Nombre</Label>
+          <Input
+            id="name"
+            className="h-11"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            className="h-11"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Contraseña</Label>
+          <Input
+            id="password"
+            type="password"
+            className="h-11"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={8}
+            required
+          />
+          <p className="text-xs text-muted-foreground">Mínimo 8 caracteres</p>
+        </div>
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-full bg-accent font-semibold text-accent-foreground hover:bg-accent/90"
+          disabled={loading}
+        >
+          {loading ? "Creando cuenta..." : "Empezar prueba gratis"}
+        </Button>
+        <p className="text-center text-sm text-muted-foreground">
+          ¿Ya tenés cuenta?{" "}
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Iniciá sesión
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

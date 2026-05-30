@@ -10,21 +10,22 @@ import { healthRouter } from "./routes/health.js";
 import { setupSocketHandlers } from "./socket/handlers.js";
 import { startTakeoverTimeoutJob } from "./jobs/takeover-timeout.js";
 import { startReminderJob } from "./jobs/reminders.js";
+import { getCorsOrigins } from "./lib/cors.js";
 
 const PORT = Number(process.env.PORT) || 3001;
-const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
+const corsOrigins = getCorsOrigins();
 
 const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [DASHBOARD_URL, "http://localhost:3000"],
+    origin: corsOrigins,
     methods: ["GET", "POST"],
   },
 });
 
-app.use(cors({ origin: [DASHBOARD_URL, "http://localhost:3000"] }));
+app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
 
 app.use("/health", healthRouter);

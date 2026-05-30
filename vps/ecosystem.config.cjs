@@ -1,3 +1,4 @@
+/** @deprecated Usar Fly.io en producción (`npm run deploy`). Solo para desarrollo local con PM2. */
 module.exports = {
   apps: [
     {

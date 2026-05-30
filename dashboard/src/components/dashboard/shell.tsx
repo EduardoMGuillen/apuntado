@@ -44,29 +44,36 @@ export function DashboardShell({
   const base = `/app/${business.id}`;
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="hidden w-64 flex-col border-r bg-card md:flex">
-        <div className="flex h-16 items-center border-b px-4">
-          <Logo size={28} />
+    <div className="flex min-h-screen bg-muted/30">
+      <aside className="hidden w-[17rem] flex-col border-r border-white/5 bg-brand-dark md:flex">
+        <div className="flex h-16 items-center border-b border-white/10 px-5">
+          <Logo size={30} className="[&_span]:text-white" />
         </div>
 
-        <div className="border-b p-4">
-          <p className="truncate font-medium">{business.name}</p>
-          <div className="mt-1 flex items-center gap-2">
+        <div className="border-b border-white/10 p-4">
+          <p className="truncate font-display font-semibold text-white">
+            {business.name}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
             <span
               className={cn(
-                "h-2 w-2 rounded-full",
+                "h-2 w-2 rounded-full ring-2 ring-white/10",
                 business.whatsappSession?.connected
-                  ? "bg-accent"
+                  ? "bg-accent shadow-[0_0_8px] shadow-accent/60"
                   : "bg-destructive"
               )}
             />
-            <span className="text-xs text-muted-foreground">
-              {business.whatsappSession?.connected ? "WhatsApp activo" : "Sin conexión"}
+            <span className="text-xs text-white/50">
+              {business.whatsappSession?.connected
+                ? "WhatsApp activo"
+                : "Sin conexión"}
             </span>
           </div>
           {business.subscription && (
-            <Badge variant="secondary" className="mt-2 capitalize">
+            <Badge
+              variant="secondary"
+              className="mt-3 capitalize border-0 bg-white/10 text-white/80"
+            >
               {business.subscription.plan}
             </Badge>
           )}
@@ -76,32 +83,30 @@ export function DashboardShell({
           {NAV.map(({ href, label, icon: Icon }) => {
             const path = `${base}${href}`;
             const active =
-              href === ""
-                ? pathname === base
-                : pathname.startsWith(path);
+              href === "" ? pathname === base : pathname.startsWith(path);
 
             return (
               <Link
                 key={href}
                 href={path}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-accent/20 text-accent shadow-sm"
+                    : "text-white/55 hover:bg-white/5 hover:text-white"
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className={cn("h-4 w-4", active && "text-accent")} />
                 {label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="border-t p-3">
+        <div className="border-t border-white/10 p-3">
           <Button
             variant="ghost"
-            className="w-full justify-start gap-3"
+            className="w-full justify-start gap-3 text-white/55 hover:bg-white/5 hover:text-white"
             onClick={() => signOut({ callbackUrl: "/" })}
           >
             <LogOut className="h-4 w-4" />
@@ -110,8 +115,8 @@ export function DashboardShell({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6">{children}</div>
+      <main className="flex-1 overflow-auto mesh-light">
+        <div className="container mx-auto max-w-6xl p-6 lg:p-8">{children}</div>
       </main>
     </div>
   );

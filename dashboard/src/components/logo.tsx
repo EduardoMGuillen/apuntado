@@ -19,7 +19,7 @@ export function Logo({ size = 32, showText = true, className = "" }: LogoProps) 
         priority
       />
       {showText && (
-        <span className="text-xl font-bold tracking-tight text-foreground">
+        <span className="font-display text-xl font-bold tracking-tight text-foreground">
           Apuntado
         </span>
       )}

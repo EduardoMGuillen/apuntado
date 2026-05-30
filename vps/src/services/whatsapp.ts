@@ -21,7 +21,9 @@ interface SessionState {
 }
 
 const sessions = new Map<string, SessionState>();
-const AUTH_DIR = path.join(process.cwd(), "auth_sessions");
+const AUTH_DIR =
+  process.env.AUTH_SESSIONS_DIR ||
+  path.join(process.cwd(), "auth_sessions");
 
 function ensureAuthDir(): void {
   if (!fs.existsSync(AUTH_DIR)) {
