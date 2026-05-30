@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { getAuthOptions } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -13,7 +12,7 @@ export default async function BusinessDashboard({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(getAuthOptions());
+  const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
   const business = await prisma.business.findFirst({

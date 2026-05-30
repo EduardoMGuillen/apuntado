@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getSession } from "@/lib/session";
 import { z } from "zod";
-import { getAuthOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const patchSchema = z.object({
@@ -15,7 +14,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(getAuthOptions());
+  const session = await getSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

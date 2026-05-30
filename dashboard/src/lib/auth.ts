@@ -120,8 +120,11 @@ function buildAuthOptions(): NextAuthOptions {
 
 let cachedOptions: NextAuthOptions | undefined;
 
-/** Lazy init para que NEXTAUTH_SECRET exista en runtime (Vercel) */
 export function getAuthOptions(): NextAuthOptions {
+  // No cachear: evita secret undefined congelado desde el build
+  if (process.env.NODE_ENV === "production") {
+    return buildAuthOptions();
+  }
   if (!cachedOptions) {
     cachedOptions = buildAuthOptions();
   }

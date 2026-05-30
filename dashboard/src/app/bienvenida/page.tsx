@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { getAuthOptions } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { GreetingScreen } from "@/components/onboarding/greeting-screen";
 
 export default async function BienvenidaPage() {
-  const session = await getServerSession(getAuthOptions());
+  const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
   const business = await prisma.business.findFirst({
