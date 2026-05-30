@@ -44,7 +44,9 @@ function buildTextMenu(body: string, menu: ReplyMenu): string {
   const intro = body.trim() || menu.prompt?.trim() || "";
   const connector =
     MENU_CONNECTORS[Math.floor(Math.random() * MENU_CONNECTORS.length)];
-  const options = menu.options.map((option) => `• ${option}`).join("\n");
+  const options = menu.options
+    .map((option, index) => `${index + 1}. ${option}`)
+    .join("\n");
 
   if (intro) {
     return `${intro}\n\n${connector}\n${options}`;

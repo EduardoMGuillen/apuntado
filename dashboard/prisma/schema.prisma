@@ -164,9 +164,11 @@ model WhatsappSession {
 model BusinessSettings {
   id                String   @id @default(cuid())
   businessId        String   @unique
-  bookingMode       String   @default("services")
-  websiteUrl        String?
-  botPlaybooks      String?  @db.Text
+  bookingMode         String   @default("services")
+  welcomeMenuGreeting String?
+  welcomeMenuOptions  String?  @db.Text
+  websiteUrl          String?
+  botPlaybooks        String?  @db.Text
   minAdvanceMinutes Int      @default(120)
   maxAdvanceDays    Int      @default(30)
   reminder24h       Boolean  @default(true)

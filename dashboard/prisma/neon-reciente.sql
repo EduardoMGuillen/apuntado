@@ -7,6 +7,10 @@
 -- 1) Modo de negocio en onboarding (services | menu | inquiries)
 ALTER TABLE "BusinessSettings"
   ADD COLUMN IF NOT EXISTS "bookingMode" TEXT NOT NULL DEFAULT 'services';
+ALTER TABLE "BusinessSettings"
+  ADD COLUMN IF NOT EXISTS "welcomeMenuGreeting" TEXT;
+ALTER TABLE "BusinessSettings"
+  ADD COLUMN IF NOT EXISTS "welcomeMenuOptions" TEXT;
 
 -- 2) Sitio web que el bot lee para eventos/promos
 ALTER TABLE "BusinessSettings"

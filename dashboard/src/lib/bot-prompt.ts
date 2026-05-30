@@ -13,6 +13,7 @@ import {
   parseBotPlaybooks,
 } from "@/lib/bot-playbooks";
 import { buildWebsiteContextSection } from "@/lib/website-fetch";
+import { buildWelcomeMenuPromptSection } from "@/lib/welcome-menu";
 
 const TZ = "America/Tegucigalpa";
 
@@ -37,6 +38,8 @@ type BusinessWithRelations = Business & {
     minAdvanceMinutes: number;
     maxAdvanceDays: number;
     bookingMode: string;
+    welcomeMenuGreeting: string | null;
+    welcomeMenuOptions: string | null;
   } | null;
   websiteContent?: { url: string; text: string } | null;
 };
@@ -139,6 +142,11 @@ export function buildSystemPrompt(
     !!websiteContent
   );
   const websiteSection = buildWebsiteContextSection(websiteContent);
+  const welcomeSection = buildWelcomeMenuPromptSection(
+    bookingMode,
+    business.settings?.welcomeMenuGreeting,
+    business.settings?.welcomeMenuOptions
+  );
 
   const schedules = business.schedules
     .filter((s) => s.isOpen)
@@ -165,6 +173,8 @@ ${catalogSection}
 ${websiteSection}
 
 ${playbooksSection}
+
+${welcomeSection}
 
 HORARIO SEMANAL:
 ${schedules || "Horario no configurado."}

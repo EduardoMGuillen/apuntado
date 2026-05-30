@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { BotPlaybook } from "@/lib/bot-playbooks";
 import { Plus, Trash2 } from "lucide-react";
 
 type TeamMember = {
@@ -27,8 +26,6 @@ interface Settings {
   websiteUrl: string | null;
   notifyPhone: string | null;
   teamMembers: TeamMember[];
-  botPlaybooks: BotPlaybook[];
-  botInstructions: string | null;
 }
 
 export function SettingsForm({
@@ -43,33 +40,6 @@ export function SettingsForm({
   const [settings, setSettings] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-
-  function updatePlaybook(index: number, field: keyof BotPlaybook, value: string) {
-    setSettings((prev) => ({
-      ...prev,
-      botPlaybooks: prev.botPlaybooks.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      ),
-    }));
-  }
-
-  function addPlaybook() {
-    if (settings.botPlaybooks.length >= 10) return;
-    setSettings((prev) => ({
-      ...prev,
-      botPlaybooks: [
-        ...prev.botPlaybooks,
-        { when: "", action: "" },
-      ],
-    }));
-  }
-
-  function removePlaybook(index: number) {
-    setSettings((prev) => ({
-      ...prev,
-      botPlaybooks: prev.botPlaybooks.filter((_, i) => i !== index),
-    }));
-  }
 
   function updateTeamMember(
     index: number,
@@ -103,10 +73,6 @@ export function SettingsForm({
     setSaving(true);
     setMessage("");
     try {
-      const playbooks = settings.botPlaybooks.filter(
-        (item) => item.when.trim() && item.action.trim()
-      );
-
       const teamMembers = settings.teamMembers.filter(
         (member) => member.name.trim() && member.whatsappPhone.trim()
       );
@@ -118,7 +84,6 @@ export function SettingsForm({
           ...settings,
           websiteUrl: settings.websiteUrl?.trim() || null,
           notifyPhone: settings.notifyPhone?.trim() || null,
-          botPlaybooks: playbooks.length > 0 ? playbooks : null,
           teamMembers: isPro ? teamMembers : undefined,
         }),
       });
@@ -132,10 +97,10 @@ export function SettingsForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bot de WhatsApp</CardTitle>
+        <CardTitle>Bot y alertas</CardTitle>
         <CardDescription>
-          Decile al bot qué hacer en cada situación. Si tenés web, la lee para
-          eventos y promos.
+          Citas, recordatorios y notificaciones. Las reglas de respuesta están en
+          el menú Reglas; menú y horarios en Personalización.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -275,81 +240,6 @@ export function SettingsForm({
             El bot revisa esta página para eventos, promos y info actualizada
             (se actualiza cada ~15 min).
           </p>
-        </div>
-
-        <div className="space-y-3">
-          <div>
-            <Label>Reglas de respuesta personalizadas</Label>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Explicale qué hacer en casos específicos. Podés usar{" "}
-              <code className="text-xs">ESCALAR_AGENTE</code> en la acción para
-              que avise al equipo y diga que un agente se conectará.
-            </p>
-          </div>
-
-          {settings.botPlaybooks.map((playbook, index) => (
-            <div
-              key={index}
-              className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-3"
-            >
-              <div className="space-y-1">
-                <Label className="text-xs">Cuando el cliente...</Label>
-                <Input
-                  placeholder="pregunte por eventos disponibles"
-                  value={playbook.when}
-                  onChange={(e) => updatePlaybook(index, "when", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Hacé esto...</Label>
-                <textarea
-                  className="flex min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  placeholder="Decile que un agente se conectará pronto e incluí ESCALAR_AGENTE al final."
-                  value={playbook.action}
-                  onChange={(e) =>
-                    updatePlaybook(index, "action", e.target.value)
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => removePlaybook(index)}
-              >
-                <Trash2 className="mr-1 h-4 w-4" />
-                Quitar regla
-              </Button>
-            </div>
-          ))}
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-            onClick={addPlaybook}
-            disabled={settings.botPlaybooks.length >= 10}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Agregar regla
-          </Button>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Notas extra para el bot</Label>
-          <textarea
-            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            placeholder="Ej: No agendamos domingos. Siempre ofrecé combo corte + barba..."
-            value={settings.botInstructions || ""}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                botInstructions: e.target.value || null,
-              })
-            }
-          />
         </div>
 
         {message && (

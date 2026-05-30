@@ -597,7 +597,7 @@ export default function OnboardingPage() {
         </div>
 
         <p className="mt-6 pb-4 text-center text-xs text-muted-foreground">
-          Podés editar menú, servicios y horarios después en Configuración
+          Podés editar menú, servicios y horarios después en Personalización
         </p>
       </div>
     </div>

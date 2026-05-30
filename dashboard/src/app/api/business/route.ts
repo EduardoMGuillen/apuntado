@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { BUSINESS_TYPE_VALUES } from "@/lib/business-types";
-import {
-  BOOKING_MODE_VALUES,
-  DEFAULT_INQUIRY_SERVICE,
-  MENU_ITEM_DURATION_MIN,
-  type BookingMode,
-} from "@/lib/booking-modes";
+import { BOOKING_MODE_VALUES } from "@/lib/booking-modes";
+import { normalizeOfferings } from "@/lib/offerings";
 import { z } from "zod";
 
 const offeringSchema = z.object({
@@ -51,29 +47,6 @@ const businessSchema = z
       });
     }
   });
-
-function normalizeOfferings(
-  mode: BookingMode,
-  offerings: z.infer<typeof offeringSchema>[]
-) {
-  if (mode === "inquiries") {
-    return [DEFAULT_INQUIRY_SERVICE];
-  }
-
-  if (mode === "menu") {
-    return offerings.map((item) => ({
-      name: item.name,
-      durationMin: MENU_ITEM_DURATION_MIN,
-      priceHNL: item.priceHNL ?? 0,
-    }));
-  }
-
-  return offerings.map((item) => ({
-    name: item.name,
-    durationMin: Math.max(15, item.durationMin ?? 30),
-    priceHNL: item.priceHNL ?? 0,
-  }));
-}
 
 export async function POST(req: NextRequest) {
   const session = await getSession();

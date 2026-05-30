@@ -14,6 +14,8 @@ import {
   Smartphone,
   LogOut,
   CreditCard,
+  SlidersHorizontal,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PoweredByNexus } from "@/components/powered-by-nexus";
@@ -29,6 +31,8 @@ const NAV = [
   { href: "", label: "Inicio", icon: LayoutDashboard },
   { href: "/conversaciones", label: "Conversaciones", icon: MessageSquare },
   { href: "/citas", label: "Citas", icon: Calendar },
+  { href: "/personalizacion", label: "Personalización", icon: SlidersHorizontal },
+  { href: "/reglas", label: "Reglas", icon: ScrollText },
   { href: "/whatsapp", label: "WhatsApp", icon: Smartphone },
   { href: "/suscripcion", label: "Suscripción", icon: CreditCard },
   { href: "/configuracion", label: "Configuración", icon: Settings },

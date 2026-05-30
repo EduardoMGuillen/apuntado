@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { parseBotPlaybooks } from "@/lib/bot-playbooks";
 import { isProPlan } from "@/lib/team-notify";
 import { getSubscriptionAccess } from "@/lib/subscription";
 
@@ -32,28 +31,16 @@ export default async function ConfigPage({
       whatsappSession: true,
       subscription: true,
       settings: true,
-      services: { where: { isActive: true } },
       employees: {
         where: { isActive: true, whatsappPhone: { not: null } },
         orderBy: { name: "asc" },
       },
-      schedules: { orderBy: { dayOfWeek: "asc" } },
     },
   });
 
   if (!business) redirect("/app");
 
   const access = getSubscriptionAccess(business.subscription);
-
-  const DAY_LABELS = [
-    "Domingo",
-    "Lunes",
-    "Martes",
-    "Miércoles",
-    "Jueves",
-    "Viernes",
-    "Sábado",
-  ];
 
   const defaultSettings = {
     minAdvanceMinutes: 120,
@@ -62,8 +49,6 @@ export default async function ConfigPage({
     websiteUrl: null as string | null,
     notifyPhone: null as string | null,
     teamMembers: [] as { id?: string; name: string; whatsappPhone: string }[],
-    botPlaybooks: [] as ReturnType<typeof parseBotPlaybooks>,
-    botInstructions: null as string | null,
   };
 
   return (
@@ -100,10 +85,26 @@ export default async function ConfigPage({
               name: employee.name,
               whatsappPhone: employee.whatsappPhone || "",
             })),
-            botPlaybooks: parseBotPlaybooks(business.settings?.botPlaybooks),
-            botInstructions: business.settings?.botInstructions ?? null,
           }}
         />
+
+        <p className="text-sm text-muted-foreground">
+          Para editar horarios, modo del bot o menú de bienvenida, andá a{" "}
+          <Link
+            href={`/app/${business.id}/personalizacion`}
+            className="font-medium text-primary underline"
+          >
+            Personalización
+          </Link>
+          . Las reglas del bot están en{" "}
+          <Link
+            href={`/app/${business.id}/reglas`}
+            className="font-medium text-primary underline"
+          >
+            Reglas
+          </Link>
+          .
+        </p>
 
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
@@ -164,43 +165,6 @@ export default async function ConfigPage({
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Servicios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 text-sm">
-                {business.services.map((s) => (
-                  <li key={s.id} className="flex justify-between">
-                    <span>{s.name}</span>
-                    <span className="text-muted-foreground">
-                      {s.durationMin} min · L.{Number(s.priceHNL).toFixed(2)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Horario</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-1 text-sm">
-                {business.schedules.map((s) => (
-                  <li key={s.id} className="flex justify-between">
-                    <span>{DAY_LABELS[s.dayOfWeek]}</span>
-                    <span className="text-muted-foreground">
-                      {s.isOpen
-                        ? `${s.openTime} - ${s.closeTime}`
-                        : "Cerrado"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </DashboardShell>
