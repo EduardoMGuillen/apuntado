@@ -8,6 +8,7 @@ import makeWASocket, {
 import { Boom } from "@hapi/boom";
 import qrcode from "qrcode-terminal";
 import type { Server } from "socket.io";
+import { extractCustomerPhoneFromMessage } from "../lib/message-phone.js";
 import { handleIncomingMessage } from "./bot-handler.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
@@ -233,10 +234,9 @@ export async function startSession(
       if (msg.key.fromMe) continue;
       if (!msg.message) continue;
 
-      const remoteJid = msg.key.remoteJid;
-      if (!remoteJid || remoteJid.endsWith("@g.us")) continue;
+      const customerPhone = extractCustomerPhoneFromMessage(msg);
+      if (!customerPhone) continue;
 
-      const customerPhone = remoteJid.replace("@s.whatsapp.net", "");
       const body =
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text ||
@@ -247,7 +247,7 @@ export async function startSession(
       try {
         await handleIncomingMessage({
           businessId,
-          customerPhone: `+${customerPhone}`,
+          customerPhone,
           body: body.trim(),
           sock,
           io,

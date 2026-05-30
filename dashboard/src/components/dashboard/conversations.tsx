@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
+import { Loader2, RefreshCw } from "lucide-react";
+import {
+  formatCustomerLabel,
+  formatCustomerSubtitle,
+  normalizeWhatsAppPhone,
+} from "@/lib/phone";
 
 interface Customer {
   whatsappPhone: string;
@@ -45,6 +51,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const selectedCustomer = customers.find((c) => c.whatsappPhone === selected);
@@ -63,12 +70,13 @@ export function ConversationsClient({ business, customers: initial }: Props) {
     socket.emit("join:business", business.id);
 
     socket.on("message:new", (msg: Message & { customerPhone: string }) => {
-      if (msg.customerPhone === selected) {
+      const msgPhone = normalizeWhatsAppPhone(msg.customerPhone);
+      if (selected && msgPhone === normalizeWhatsAppPhone(selected)) {
         setMessages((prev) => [...prev, msg]);
       }
       setCustomers((prev) =>
         prev.map((c) =>
-          c.whatsappPhone === msg.customerPhone
+          normalizeWhatsAppPhone(c.whatsappPhone) === msgPhone
             ? {
                 ...c,
                 lastMessage: msg.body,
@@ -109,6 +117,37 @@ export function ConversationsClient({ business, customers: initial }: Props) {
     );
   }
 
+  async function refreshConversations() {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`/api/business/${business.id}/conversations`);
+      if (!res.ok) return;
+      const list: Customer[] = await res.json();
+      setCustomers(list);
+
+      const current = selected
+        ? list.find(
+            (c) =>
+              normalizeWhatsAppPhone(c.whatsappPhone) ===
+              normalizeWhatsAppPhone(selected)
+          )?.whatsappPhone ?? list[0]?.whatsappPhone ?? null
+        : list[0]?.whatsappPhone ?? null;
+
+      if (current !== selected) {
+        setSelected(current);
+      } else if (current) {
+        const msgRes = await fetch(
+          `/api/business/${business.id}/messages?phone=${encodeURIComponent(current)}`
+        );
+        if (msgRes.ok) {
+          setMessages(await msgRes.json());
+        }
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function sendReply() {
     if (!selected || !reply.trim()) return;
     setSending(true);
@@ -141,7 +180,23 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   return (
     <DashboardShell business={business}>
       <div className="flex h-[calc(100vh-8rem)] flex-col">
-        <h1 className="mb-4 text-2xl font-bold">Conversaciones</h1>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">Conversaciones</h1>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={refreshConversations}
+            disabled={refreshing}
+          >
+            {refreshing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="ml-2">Refrescar</span>
+          </Button>
+        </div>
 
         <div className="flex flex-1 overflow-hidden rounded-xl border">
           <div className="w-72 overflow-y-auto border-r">
@@ -160,11 +215,16 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                   )}
                 >
                   <p className="truncate font-medium text-sm">
-                    {c.name || c.whatsappPhone}
+                    {formatCustomerLabel(c.whatsappPhone, c.name)}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {c.lastMessage || c.whatsappPhone}
+                    {c.lastMessage || formatCustomerSubtitle(c.whatsappPhone)}
                   </p>
+                  {c.name && (
+                    <p className="truncate text-[10px] text-muted-foreground/80">
+                      {formatCustomerSubtitle(c.whatsappPhone)}
+                    </p>
+                  )}
                 </button>
               ))
             )}
@@ -176,9 +236,15 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                 <div className="flex items-center justify-between border-b p-4">
                   <div>
                     <p className="font-medium">
-                      {selectedCustomer.name || selectedCustomer.whatsappPhone}
+                      {formatCustomerLabel(
+                        selectedCustomer.whatsappPhone,
+                        selectedCustomer.name
+                      )}
                     </p>
-                    {statusBadge(selectedCustomer)}
+                    <p className="text-sm text-muted-foreground">
+                      {formatCustomerSubtitle(selectedCustomer.whatsappPhone)}
+                    </p>
+                    <div className="mt-1">{statusBadge(selectedCustomer)}</div>
                   </div>
                   <div className="flex gap-2">
                     {selectedCustomer.manualTakeover ? (

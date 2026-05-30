@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsappMessage } from "@/lib/vps";
+import { normalizeWhatsAppPhone } from "@/lib/phone";
 
 async function verifyOwner(businessId: string, userId: string) {
   return prisma.business.findFirst({
@@ -23,13 +24,16 @@ export async function GET(
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
   }
 
-  const phone = req.nextUrl.searchParams.get("phone");
-  if (!phone) {
+  const rawPhone = req.nextUrl.searchParams.get("phone");
+  if (!rawPhone) {
     return NextResponse.json({ error: "phone requerido" }, { status: 400 });
   }
 
+  const phone = normalizeWhatsAppPhone(rawPhone);
+  const phones = phone === rawPhone ? [phone] : [phone, rawPhone];
+
   const messages = await prisma.whatsappMessage.findMany({
-    where: { businessId: params.id, customerPhone: phone },
+    where: { businessId: params.id, customerPhone: { in: phones } },
     orderBy: { createdAt: "asc" },
     take: 100,
     select: { body: true, fromClient: true, createdAt: true },
