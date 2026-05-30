@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -47,6 +48,51 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const base = `/app/${business.id}`;
+  const [waConnected, setWaConnected] = useState(
+    business.whatsappSession?.connected ?? false
+  );
+
+  useEffect(() => {
+    setWaConnected(business.whatsappSession?.connected ?? false);
+  }, [business.whatsappSession?.connected]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function sync() {
+      try {
+        const res = await fetch(`/api/business/${business.id}/whatsapp/status`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setWaConnected(!!data.connected);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    void sync();
+    const interval = setInterval(sync, 45_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [business.id]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void fetch(`/api/business/${business.id}/whatsapp/status`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) setWaConnected(!!data.connected);
+          })
+          .catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [business.id]);
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -63,15 +109,13 @@ export function DashboardShell({
             <span
               className={cn(
                 "h-2 w-2 rounded-full ring-2 ring-white/10",
-                business.whatsappSession?.connected
+                waConnected
                   ? "bg-accent shadow-[0_0_8px] shadow-accent/60"
                   : "bg-destructive"
               )}
             />
             <span className="text-xs text-white/50">
-              {business.whatsappSession?.connected
-                ? "WhatsApp activo"
-                : "Sin conexión"}
+              {waConnected ? "WhatsApp activo" : "Sin conexión"}
             </span>
           </div>
           {business.subscription && (

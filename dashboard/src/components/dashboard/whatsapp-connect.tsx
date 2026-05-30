@@ -42,6 +42,25 @@ export function WhatsappConnectClient({ business }: Props) {
   const [statusHint, setStatusHint] = useState<string | null>(null);
   const loadingStartedAt = useRef<number | null>(null);
 
+  async function syncConnectionStatus() {
+    try {
+      const res = await fetch(`/api/business/${business.id}/whatsapp/status`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setConnected(!!data.connected);
+      if (data.connected) {
+        setQr(null);
+        setError(null);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  useEffect(() => {
+    void syncConnectionStatus();
+  }, [business.id]);
+
   useEffect(() => {
     const vpsUrl = process.env.NEXT_PUBLIC_VPS_URL || "http://localhost:3001";
     const socket: Socket = io(vpsUrl, {
@@ -74,6 +93,7 @@ export function WhatsappConnectClient({ business }: Props) {
         setStatusHint(null);
         setLoading(false);
         setProgress(0);
+        void syncConnectionStatus();
       }
     });
 

@@ -11,6 +11,7 @@ import { setupSocketHandlers } from "./socket/handlers.js";
 import { startTakeoverTimeoutJob } from "./jobs/takeover-timeout.js";
 import { startReminderJob } from "./jobs/reminders.js";
 import { getCorsOrigins } from "./lib/cors.js";
+import { restorePersistedSessions } from "./services/whatsapp.js";
 
 const PORT = Number(process.env.PORT) || 3001;
 const corsOrigins = getCorsOrigins();
@@ -39,6 +40,7 @@ startReminderJob();
 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`[Apuntado VPS] Servidor corriendo en 0.0.0.0:${PORT}`);
+  void restorePersistedSessions(io);
 });
 
 export { io };

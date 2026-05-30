@@ -9,7 +9,7 @@ import { Boom } from "@hapi/boom";
 import qrcode from "qrcode-terminal";
 import type { Server } from "socket.io";
 import { handleIncomingMessage } from "./bot-handler.js";
-import { saveOutgoingMessage } from "./db.js";
+import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
 import fs from "fs";
 import pino from "pino";
@@ -187,6 +187,10 @@ export async function startSession(
         connected: false,
       });
 
+      void setSessionConnected(businessId, false).catch((err) =>
+        console.error("[WhatsApp] No se pudo actualizar DB (desconectado):", err)
+      );
+
       if (isFatal) {
         teardownSession(businessId);
         if (statusCode === 405 || statusCode === DisconnectReason.forbidden) {
@@ -213,6 +217,10 @@ export async function startSession(
         businessId,
         connected: true,
       });
+
+      void setSessionConnected(businessId, true).catch((err) =>
+        console.error("[WhatsApp] No se pudo actualizar DB (conectado):", err)
+      );
 
       console.log(`[WhatsApp] Sesión conectada: ${businessId}`);
     }
@@ -273,4 +281,29 @@ export async function sendMessage(
   const jid = customerPhone.replace("+", "") + "@s.whatsapp.net";
   await session.sock.sendMessage(jid, { text: body });
   await saveOutgoingMessage(businessId, customerPhone, body);
+}
+
+/** Tras reinicio del VPS, reconectar sesiones guardadas en el volumen. */
+export async function restorePersistedSessions(io: Server): Promise<void> {
+  ensureAuthDir();
+
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(AUTH_DIR, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  const businessIds = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  if (businessIds.length === 0) return;
+
+  console.log(`[WhatsApp] Restaurando ${businessIds.length} sesión(es) guardada(s)…`);
+
+  for (const businessId of businessIds) {
+    try {
+      await startSession(businessId, io, { forceQr: false });
+    } catch (err) {
+      console.error(`[WhatsApp] Error restaurando ${businessId}:`, err);
+    }
+  }
 }
