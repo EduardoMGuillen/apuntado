@@ -18,8 +18,13 @@ const DEFAULT_ESCALATION_REPLY =
 const SUBSCRIPTION_INACTIVE_MESSAGE =
   "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
+
+function getAnthropicClient(): Anthropic | null {
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!key) return null;
+  return new Anthropic({ apiKey: key });
+}
 
 const TRIVIAL_PATTERNS =
   /^(ok|okay|vale|gracias|thanks|si|sí|no|bueno|listo|perfecto|👍|🙏|😊|✅|👌)[\s!.]*$/i;
@@ -122,6 +127,12 @@ export async function handleIncomingMessage({
   if (isTrivialMessage(body)) {
     reply = randomTrivialReply();
   } else {
+    const anthropic = getAnthropicClient();
+    if (!anthropic) {
+      console.error("[Bot] ANTHROPIC_API_KEY no configurada en el VPS");
+      reply =
+        "Hola, el asistente está en configuración. El negocio te responderá pronto. 🙏";
+    } else {
     const history = await getMessageHistory(businessId, customerPhone);
 
     const messages: Anthropic.MessageParam[] = [
@@ -188,6 +199,7 @@ export async function handleIncomingMessage({
       } catch (err) {
         console.error("[Bot] Error escalando a agente:", err);
       }
+    }
     }
   }
 

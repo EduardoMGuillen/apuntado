@@ -244,13 +244,17 @@ export async function startSession(
 
       if (!body.trim()) continue;
 
-      await handleIncomingMessage({
-        businessId,
-        customerPhone: `+${customerPhone}`,
-        body: body.trim(),
-        sock,
-        io,
-      });
+      try {
+        await handleIncomingMessage({
+          businessId,
+          customerPhone: `+${customerPhone}`,
+          body: body.trim(),
+          sock,
+          io,
+        });
+      } catch (err) {
+        console.error("[WhatsApp] Error procesando mensaje:", err);
+      }
     }
   });
 }

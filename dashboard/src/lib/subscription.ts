@@ -58,16 +58,19 @@ export function getSubscriptionAccess(
     };
   }
 
-  if (sub.status === "active" && sub.stripeSubscriptionId) {
+  if (sub.status === "active") {
     const inTrial = sub.trialEndsAt && sub.trialEndsAt > now;
-    return {
-      active: true,
-      reason: inTrial ? "trial" : "paid",
-      plan: sub.plan,
-      status: sub.status,
-      trialEndsAt: sub.trialEndsAt,
-      currentPeriodEnd: sub.currentPeriodEnd,
-    };
+    const hasStripe = !!sub.stripeSubscriptionId;
+    if (hasStripe || inTrial) {
+      return {
+        active: true,
+        reason: inTrial ? "trial" : "paid",
+        plan: sub.plan,
+        status: sub.status,
+        trialEndsAt: sub.trialEndsAt,
+        currentPeriodEnd: sub.currentPeriodEnd,
+      };
+    }
   }
 
   return {

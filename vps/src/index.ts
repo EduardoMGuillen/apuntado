@@ -40,6 +40,11 @@ startReminderJob();
 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`[Apuntado VPS] Servidor corriendo en 0.0.0.0:${PORT}`);
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+    console.error(
+      "[Apuntado VPS] ANTHROPIC_API_KEY no configurada — el bot no podrá responder. Ejecutá: fly secrets set ANTHROPIC_API_KEY=... -a apuntado-vps"
+    );
+  }
   void restorePersistedSessions(io);
 });
 
