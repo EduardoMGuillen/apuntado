@@ -1,12 +1,15 @@
 import type { NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-function getAuthSecret(): string | undefined {
-  return process.env.NEXTAUTH_SECRET;
+async function resolveDbUserId(email: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: { id: true },
+  });
+  return user?.id ?? null;
 }
 
 function buildAuthOptions(): NextAuthOptions {
@@ -20,7 +23,6 @@ function buildAuthOptions(): NextAuthOptions {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-
         if (!process.env.DATABASE_URL) {
           console.error("[auth] DATABASE_URL no configurado");
           return null;
@@ -29,10 +31,7 @@ function buildAuthOptions(): NextAuthOptions {
         const email = credentials.email.trim().toLowerCase();
 
         try {
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
-
+          const user = await prisma.user.findUnique({ where: { email } });
           if (!user?.passwordHash) return null;
 
           const valid = await bcrypt.compare(
@@ -41,11 +40,7 @@ function buildAuthOptions(): NextAuthOptions {
           );
           if (!valid) return null;
 
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-          };
+          return { id: user.id, email: user.email, name: user.name };
         } catch (err) {
           console.error("[auth] credentials authorize failed:", err);
           return null;
@@ -64,10 +59,8 @@ function buildAuthOptions(): NextAuthOptions {
   }
 
   return {
-    secret: getAuthSecret(),
-    adapter: process.env.DATABASE_URL
-      ? (PrismaAdapter(prisma) as NextAuthOptions["adapter"])
-      : undefined,
+    secret: process.env.NEXTAUTH_SECRET,
+    // Sin PrismaAdapter: rompe JWT + credentials en producción
     session: {
       strategy: "jwt",
       maxAge: 30 * 24 * 60 * 60,
@@ -79,15 +72,35 @@ function buildAuthOptions(): NextAuthOptions {
     providers,
     callbacks: {
       async signIn({ user, account }) {
+        if (account?.provider === "google" && user.email) {
+          const email = user.email.trim().toLowerCase();
+          const existing = await prisma.user.findUnique({ where: { email } });
+          if (!existing) {
+            await prisma.user.create({
+              data: {
+                email,
+                name: user.name || email,
+                image: user.image,
+              },
+            });
+          }
+          return true;
+        }
         if (account?.provider === "credentials") {
           return !!user?.id;
         }
         return true;
       },
       async jwt({ token, user }) {
-        if (user?.id) {
-          token.id = user.id;
-          token.sub = user.id;
+        if (user?.email) {
+          const dbId = await resolveDbUserId(user.email);
+          if (dbId) {
+            token.id = dbId;
+            token.sub = dbId;
+          } else if (user.id) {
+            token.id = user.id;
+            token.sub = user.id;
+          }
         }
         return token;
       },
@@ -103,9 +116,19 @@ function buildAuthOptions(): NextAuthOptions {
   };
 }
 
-/** Opciones estables para NextAuth (route + getServerSession + middleware) */
-export const authOptions: NextAuthOptions = buildAuthOptions();
+let cachedOptions: NextAuthOptions | undefined;
 
+/** Lazy init para que NEXTAUTH_SECRET exista en runtime (Vercel) */
 export function getAuthOptions(): NextAuthOptions {
-  return authOptions;
+  if (!cachedOptions) {
+    cachedOptions = buildAuthOptions();
+  }
+  return cachedOptions;
 }
+
+/** @deprecated usar getAuthOptions() */
+export const authOptions = new Proxy({} as NextAuthOptions, {
+  get(_target, prop) {
+    return getAuthOptions()[prop as keyof NextAuthOptions];
+  },
+});

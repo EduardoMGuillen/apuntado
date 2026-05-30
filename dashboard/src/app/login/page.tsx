@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,11 +67,16 @@ function LoginForm() {
         return;
       }
 
-      // Recarga completa para que middleware y servidor lean la cookie JWT
+      const session = await getSession();
+      if (!session?.user) {
+        setError(
+          "Login correcto pero la sesión no se guardó. Borrá cookies de apuntado.app e intentá de nuevo."
+        );
+        return;
+      }
+
       const callback = searchParams.get("callbackUrl") || "/app";
-      window.location.href = callback.startsWith("/")
-        ? callback
-        : "/app";
+      window.location.href = callback.startsWith("/") ? callback : "/app";
     } catch (err) {
       console.error("[login]", err);
       setError(

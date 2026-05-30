@@ -16,6 +16,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PoweredByNexus } from "@/components/powered-by-nexus";
 
 interface Business {
   id: string;
@@ -103,7 +104,8 @@ export function DashboardShell({
           })}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
+        <div className="border-t border-white/10 p-3 space-y-2">
+          <PoweredByNexus className="px-3 text-white/40 [&_a]:text-white/55 [&_a:hover]:text-white" />
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-white/55 hover:bg-white/5 hover:text-white"
