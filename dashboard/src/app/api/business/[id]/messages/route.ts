@@ -1,30 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsappMessage } from "@/lib/vps";
 import { normalizeWhatsAppPhone } from "@/lib/phone";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
 import { resolveReplyJid } from "@/lib/reply-jid";
-
-async function verifyOwner(businessId: string, userId: string) {
-  return prisma.business.findFirst({
-    where: { id: businessId, ownerId: userId },
-  });
-}
+import { requireBusinessApiAccess } from "@/lib/api-business-guard";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const business = await verifyOwner(params.id, session.user.id);
-  if (!business) {
-    return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-  }
+  const access = await requireBusinessApiAccess(params.id);
+  if (access.response) return access.response;
 
   const rawPhone = req.nextUrl.searchParams.get("phone");
   if (!rawPhone) {
@@ -50,15 +37,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const business = await verifyOwner(params.id, session.user.id);
-  if (!business) {
-    return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-  }
+  const access = await requireBusinessApiAccess(params.id);
+  if (access.response) return access.response;
 
   const { customerPhone: rawPhone, body } = await req.json();
   if (!rawPhone || !body) {

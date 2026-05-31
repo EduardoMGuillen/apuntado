@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { sendWelcomeEmail } from "@/lib/resend";
+import { sendWelcomeEmail } from "@/lib/emails/send";
+import { isSuperAdminEmail } from "@/lib/roles";
 
 const registerSchema = z.object({
   name: z.string().min(2),
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
         name: data.name,
         email: data.email,
         passwordHash,
+        role: isSuperAdminEmail(data.email) ? "super_admin" : "user",
       },
     });
 

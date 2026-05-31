@@ -29,6 +29,7 @@ import {
 } from "@/lib/conversation-tones";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
+import { CA_CITY_PLACEHOLDER, CA_PHONE_PLACEHOLDER } from "@/lib/region";
 
 const DAY_LABELS = [
   "Domingo",
@@ -301,7 +302,7 @@ export function PersonalizationForm({
                 id="biz-phone"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+5049XXXXXXX"
+                placeholder={CA_PHONE_PLACEHOLDER}
               />
             </div>
             <div className="space-y-2">
@@ -310,6 +311,7 @@ export function PersonalizationForm({
                 id="biz-city"
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
+                placeholder={CA_CITY_PLACEHOLDER}
               />
             </div>
           </div>

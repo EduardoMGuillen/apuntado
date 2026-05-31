@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { verifyBusinessAccess } from "@/lib/business-access";
 import { getStripe } from "@/lib/stripe";
 import { isStripeConfigured, isSimulatedStripeId } from "@/lib/stripe-config";
 
@@ -25,10 +25,12 @@ export async function POST(req: NextRequest) {
   try {
     const { businessId } = bodySchema.parse(await req.json());
 
-    const business = await prisma.business.findFirst({
-      where: { id: businessId, ownerId: session.user.id },
-      include: { subscription: true },
-    });
+    const business = await verifyBusinessAccess(
+      businessId,
+      session.user.id,
+      session.user.role,
+      { subscription: true }
+    );
 
     const customerId = business?.subscription?.stripeCustomerId;
 

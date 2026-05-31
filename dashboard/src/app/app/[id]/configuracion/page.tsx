@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { getBusinessForSession } from "@/lib/business-access";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { SettingsForm } from "@/components/dashboard/settings-form";
 import { buttonVariants } from "@/components/ui/button";
@@ -25,16 +25,13 @@ export default async function ConfigPage({
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: {
-      whatsappSession: true,
-      subscription: true,
-      settings: true,
-      employees: {
-        where: { isActive: true, whatsappPhone: { not: null } },
-        orderBy: { name: "asc" },
-      },
+  const business = await getBusinessForSession(session, params.id, {
+    whatsappSession: true,
+    subscription: true,
+    settings: true,
+    employees: {
+      where: { isActive: true, whatsappPhone: { not: null } },
+      orderBy: { name: "asc" },
     },
   });
 
@@ -151,7 +148,7 @@ export default async function ConfigPage({
               {access.trialEndsAt && access.reason === "trial" && (
                 <p>
                   Prueba hasta:{" "}
-                  {access.trialEndsAt.toLocaleDateString("es-HN", {
+                  {access.trialEndsAt.toLocaleDateString("es", {
                     dateStyle: "long",
                   })}
                 </p>

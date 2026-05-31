@@ -11,7 +11,8 @@ import {
 } from "@/lib/welcome-menu";
 import { CONVERSATION_TONE_VALUES } from "@/lib/conversation-tones";
 
-const HN_PHONE = /^\+504[39]\d{7}$/;
+import { verifyBusinessAccess } from "@/lib/business-access";
+import { CA_PHONE_ERROR, CA_PHONE_REGEX } from "@/lib/region";
 
 const offeringSchema = z.object({
   id: z.string().optional(),
@@ -31,7 +32,7 @@ const patchSchema = z
   .object({
     name: z.string().min(2).max(120).optional(),
     type: z.enum(BUSINESS_TYPE_VALUES).optional(),
-    phone: z.string().regex(HN_PHONE).optional(),
+    phone: z.string().regex(CA_PHONE_REGEX, CA_PHONE_ERROR).optional(),
     city: z.string().min(2).max(80).optional(),
     address: z.string().max(200).nullable().optional(),
     bookingMode: z.enum(BOOKING_MODE_VALUES).optional(),
@@ -69,10 +70,12 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: { settings: true, services: true },
-  });
+  const business = await verifyBusinessAccess(
+    params.id,
+    session.user.id,
+    session.user.role,
+    { settings: true, services: true }
+  );
 
   if (!business) {
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });

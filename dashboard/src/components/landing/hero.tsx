@@ -46,13 +46,13 @@ function ChatMockup() {
 
 export function LandingHero() {
   return (
-    <section className="relative min-h-screen mesh-hero grid-pattern overflow-hidden pt-24">
+    <section className="relative min-h-dvh-screen mesh-hero grid-pattern overflow-hidden pt-[calc(6rem+var(--safe-top))]">
       <div className="container relative mx-auto px-4 pb-20 pt-12 lg:px-8 lg:pt-20">
         <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-12">
           <div className="text-center lg:text-left">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm">
               <Sparkles className="h-4 w-4 text-accent" />
-              Hecho para negocios en Honduras
+              Hecho para negocios en Centroamérica
             </div>
             <h1 className="font-display text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-[3.5rem]">
               Citas por WhatsApp,{" "}
@@ -64,7 +64,7 @@ export function LandingHero() {
               sigue en tu celular.
             </p>
             <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70 lg:justify-start">
-              {["14 días gratis", "Sin spam masivo", "Español hondureño", "L. y zona HN"].map(
+              {["14 días gratis", "Sin spam masivo", "Español claro", "GT · SV · HN · NI · CR · PA"].map(
                 (item) => (
                   <li key={item} className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-accent" />

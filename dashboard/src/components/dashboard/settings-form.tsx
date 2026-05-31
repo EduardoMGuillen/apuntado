@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
+import { CA_PHONE_PLACEHOLDER } from "@/lib/region";
 
 type TeamMember = {
   id?: string;
@@ -58,7 +59,7 @@ export function SettingsForm({
     if (settings.teamMembers.length >= 10) return;
     setSettings((prev) => ({
       ...prev,
-      teamMembers: [...prev.teamMembers, { name: "", whatsappPhone: "+504" }],
+      teamMembers: [...prev.teamMembers, { name: "", whatsappPhone: "" }],
     }));
   }
 
@@ -114,7 +115,7 @@ export function SettingsForm({
           </div>
           <Input
             id="notify-phone"
-            placeholder="+5049XXXXXXX"
+            placeholder={CA_PHONE_PLACEHOLDER}
             value={settings.notifyPhone || ""}
             onChange={(e) =>
               setSettings({
@@ -148,7 +149,7 @@ export function SettingsForm({
                   }
                 />
                 <Input
-                  placeholder="+5049XXXXXXX"
+                  placeholder={CA_PHONE_PLACEHOLDER}
                   value={member.whatsappPhone}
                   onChange={(e) =>
                     updateTeamMember(index, "whatsappPhone", e.target.value)

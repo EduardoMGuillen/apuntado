@@ -172,7 +172,7 @@ export function buildSystemPrompt(
 
   const typeLabel = getBusinessTypeLabel(business.type);
 
-  return `Sos el asistente de WhatsApp de "${business.name}" (${typeLabel}) en ${business.city}, Honduras.
+  return `Sos el asistente de WhatsApp de "${business.name}" (${typeLabel}) en ${business.city}, Centroamérica.
 ${buildModeIntro(bookingMode)}
 Nunca repitas el mismo texto dos veces. Sé breve y amable.
 
@@ -197,8 +197,8 @@ ${availability}
 REGLAS:
 - Anticipación mínima: ${business.settings?.minAdvanceMinutes ?? 120} minutos
 - Máximo ${business.settings?.maxAdvanceDays ?? 30} días de anticipación
-- Moneda: Lempiras (L.)
-- Zona horaria: Honduras (UTC-6)
+- Moneda: Lempiras (L.) u otra moneda local que use el negocio
+- Zona horaria: Centroamérica (UTC-6; Panamá UTC-5 si aplica)
 - Cuando confirmes una cita, incluí la palabra exacta CITA_CONFIRMADA al final (el cliente NO la verá)
 - En la línea siguiente a CITA_CONFIRMADA, incluí: CITA_DATA:{"serviceName":"...","scheduledAt":"ISO8601","employeeName":"..."}
 - scheduledAt debe ser ISO 8601 en zona America/Tegucigalpa

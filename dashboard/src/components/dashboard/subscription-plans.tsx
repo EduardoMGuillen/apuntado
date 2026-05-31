@@ -164,7 +164,7 @@ export function SubscriptionPlans({
           <p className="text-sm text-muted-foreground">
             Prueba hasta:{" "}
             <strong>
-              {new Date(access.trialEndsAt).toLocaleDateString("es-HN", {
+              {new Date(access.trialEndsAt).toLocaleDateString("es", {
                 dateStyle: "long",
               })}
             </strong>

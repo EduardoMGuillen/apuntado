@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/logo";
+import { CA_FOOTER_FLAGS } from "@/lib/region";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Calendar, MessageCircle, Sparkles } from "lucide-react";
@@ -27,10 +28,10 @@ const STEPS = [
 
 export function GreetingScreen({ firstName }: { firstName: string }) {
   return (
-    <div className="relative min-h-screen mesh-hero grid-pattern overflow-hidden">
+    <div className="relative min-h-dvh-screen mesh-hero grid-pattern overflow-hidden">
       <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-background to-transparent" />
 
-      <div className="container relative mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="container relative mx-auto flex min-h-dvh-screen max-w-2xl flex-col items-center justify-center px-4 px-safe py-16 pb-safe pt-safe text-center">
         <Logo size={44} className="mb-10 [&_span]:text-white" />
 
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm text-white/90 backdrop-blur-sm">
@@ -88,7 +89,7 @@ export function GreetingScreen({ firstName }: { firstName: string }) {
             height={32}
             className="rounded-lg"
           />
-          <span className="text-xs text-white/50">Apuntado · Honduras 🇭🇳</span>
+          <span className="text-xs text-white/50">Apuntado · Centroamérica {CA_FOOTER_FLAGS}</span>
         </div>
       </div>
     </div>

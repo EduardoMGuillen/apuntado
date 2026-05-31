@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getBusinessForSession } from "@/lib/business-access";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -15,13 +16,10 @@ export default async function BusinessDashboard({
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: {
-      whatsappSession: true,
-      subscription: true,
-      services: { where: { isActive: true } },
-    },
+  const business = await getBusinessForSession(session, params.id, {
+    whatsappSession: true,
+    subscription: true,
+    services: { where: { isActive: true } },
   });
 
   if (!business) redirect("/app");
@@ -68,7 +66,7 @@ export default async function BusinessDashboard({
             linkLabel="Ver planes"
           >
             Prueba gratis hasta{" "}
-            {access.trialEndsAt.toLocaleDateString("es-HN", { dateStyle: "long" })}.
+            {access.trialEndsAt.toLocaleDateString("es", { dateStyle: "long" })}.
           </AlertBanner>
         )}
 

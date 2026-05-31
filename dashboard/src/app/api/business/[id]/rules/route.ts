@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { verifyBusinessAccess } from "@/lib/business-access";
 
 const playbookSchema = z.object({
   when: z.string().min(3).max(200),
@@ -22,9 +23,11 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-  });
+  const business = await verifyBusinessAccess(
+    params.id,
+    session.user.id,
+    session.user.role
+  );
 
   if (!business) {
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });

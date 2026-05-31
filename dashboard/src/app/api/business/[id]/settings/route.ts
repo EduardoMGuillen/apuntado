@@ -3,8 +3,8 @@ import { getSession } from "@/lib/session";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isProPlan } from "@/lib/team-notify";
-
-const HN_PHONE = /^\+504[39]\d{7}$/;
+import { verifyBusinessAccess } from "@/lib/business-access";
+import { CA_PHONE_ERROR, CA_PHONE_REGEX } from "@/lib/region";
 
 const playbookSchema = z.object({
   when: z.string().min(3).max(200),
@@ -14,7 +14,7 @@ const playbookSchema = z.object({
 const teamMemberSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1).max(80),
-  whatsappPhone: z.string().regex(HN_PHONE, "Formato: +504XXXXXXXX"),
+  whatsappPhone: z.string().regex(CA_PHONE_REGEX, CA_PHONE_ERROR),
 });
 
 const patchSchema = z.object({
@@ -23,7 +23,7 @@ const patchSchema = z.object({
   reminder24h: z.boolean().optional(),
   websiteUrl: z.string().max(500).nullable().optional(),
   notifyPhone: z
-    .union([z.string().regex(HN_PHONE, "Formato: +504XXXXXXXX"), z.literal(""), z.null()])
+    .union([z.string().regex(CA_PHONE_REGEX, CA_PHONE_ERROR), z.literal(""), z.null()])
     .optional(),
   botPlaybooks: z.array(playbookSchema).max(10).nullable().optional(),
   botInstructions: z.string().max(2000).nullable().optional(),
@@ -39,10 +39,12 @@ export async function PATCH(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: { settings: true, subscription: true, employees: true },
-  });
+  const business = await verifyBusinessAccess(
+    params.id,
+    session.user.id,
+    session.user.role,
+    { settings: true, subscription: true, employees: true }
+  );
 
   if (!business) {
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });

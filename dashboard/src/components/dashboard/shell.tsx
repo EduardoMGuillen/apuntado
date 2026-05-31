@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,8 @@ import {
   SlidersHorizontal,
   ScrollText,
   Menu,
+  User,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PoweredByNexus } from "@/components/powered-by-nexus";
@@ -143,6 +145,8 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === "super_admin";
   const base = `/app/${business.id}`;
   const [waConnected, setWaConnected] = useState(
     business.whatsappSession?.connected ?? false
@@ -198,7 +202,7 @@ export function DashboardShell({
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="flex min-h-dvh min-h-[100dvh] flex-col bg-muted/30 md:flex-row">
+    <div className="flex min-h-dvh-screen flex-col bg-muted/30 md:flex-row">
       {/* Escritorio: barra lateral */}
       <aside className="hidden w-[17rem] shrink-0 flex-col border-r border-white/5 bg-brand-dark md:flex">
         <div className="flex h-16 items-center border-b border-white/10 px-5">
@@ -214,6 +218,22 @@ export function DashboardShell({
         </nav>
         <div className="space-y-2 border-t border-white/10 p-3">
           <PoweredByNexus className="px-3 text-white/40 [&_a]:text-white/55 [&_a:hover]:text-white" />
+          <Link
+            href="/app/cuenta"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white"
+          >
+            <User className="h-4 w-4" />
+            Mi cuenta
+          </Link>
+          {isSuperAdmin && (
+            <Link
+              href="/admin"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white"
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-white/55 hover:bg-white/5 hover:text-white"
@@ -227,7 +247,8 @@ export function DashboardShell({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Móvil / PWA: cabecera */}
-        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border/80 bg-background/95 px-3 backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)] md:hidden">
+        <header className="sticky top-0 z-40 shrink-0 border-b border-border/80 bg-background/95 pt-safe backdrop-blur-md md:hidden">
+          <div className="flex h-14 items-center gap-3 px-3 px-safe">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
               render={
@@ -244,10 +265,10 @@ export function DashboardShell({
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="flex w-[min(100vw,18rem)] max-w-[18rem] flex-col gap-0 border-0 bg-brand-dark p-0 text-white sm:max-w-[18rem] [&>button]:text-white"
+              className="flex w-[min(100vw,18rem)] max-w-[18rem] flex-col gap-0 border-0 bg-brand-dark p-0 pt-safe text-white sm:max-w-[18rem] [&>button]:top-[max(0.75rem,var(--safe-top))] [&>button]:text-white"
             >
               <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
-              <div className="flex h-14 items-center border-b border-white/10 px-4">
+              <div className="flex h-14 shrink-0 items-center border-b border-white/10 px-4 px-safe">
                 <Logo size={28} className="[&_span]:text-white" />
               </div>
               <BusinessSummary
@@ -263,8 +284,26 @@ export function DashboardShell({
                   onNavigate={closeMenu}
                 />
               </nav>
-              <div className="space-y-2 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <div className="space-y-2 border-t border-white/10 p-3 pb-safe px-safe">
                 <PoweredByNexus className="px-3 text-white/40 [&_a]:text-white/55" />
+                <Link
+                  href="/app/cuenta"
+                  onClick={closeMenu}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white"
+                >
+                  <User className="h-4 w-4" />
+                  Mi cuenta
+                </Link>
+                {isSuperAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={closeMenu}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Link>
+                )}
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-3 text-white/55 hover:bg-white/5 hover:text-white"
@@ -289,23 +328,21 @@ export function DashboardShell({
               {waConnected ? "WhatsApp activo" : "Sin conexión"}
             </p>
           </div>
+          </div>
         </header>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-auto mesh-light">
-          <div className="container mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-4 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:px-6 md:py-6 md:pb-6 lg:px-8 lg:py-8">
+          <div className="container mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-4 py-4 pb-mobile-nav md:px-6 md:py-6 md:pb-6 lg:px-8 lg:py-8">
             {children}
           </div>
         </main>
 
         {/* Móvil / PWA: accesos rápidos */}
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-md md:hidden"
-          style={{
-            paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))",
-          }}
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 pb-safe backdrop-blur-md md:hidden"
           aria-label="Navegación principal"
         >
-          <div className="grid h-14 grid-cols-4">
+          <div className="grid h-14 grid-cols-4 px-safe">
             {MOBILE_TAB_HREFS.map((href) => {
               const item = NAV.find((n) => n.href === href)!;
               const path = `${base}${href}`;

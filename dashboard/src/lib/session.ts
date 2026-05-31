@@ -37,6 +37,7 @@ export async function getSession(): Promise<Session | null> {
       email: (token.email as string | undefined) ?? null,
       name: (token.name as string | undefined) ?? null,
       image: (token.picture as string | undefined) ?? null,
+      role: (token.role as "user" | "super_admin" | undefined) ?? "user",
     },
     expires: token.exp
       ? new Date((token.exp as number) * 1000).toISOString()

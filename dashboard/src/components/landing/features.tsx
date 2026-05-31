@@ -46,7 +46,7 @@ const FEATURES = [
 const MINI = [
   { icon: Users, label: "Multi-empleado" },
   { icon: Zap, label: "Respuesta rápida" },
-  { icon: Clock, label: "Horario HN" },
+  { icon: Clock, label: "Zona CA" },
 ];
 
 export function LandingFeatures() {

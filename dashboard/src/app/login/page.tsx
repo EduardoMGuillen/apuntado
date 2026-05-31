@@ -45,6 +45,7 @@ function LoginForm() {
 
   const urlError = searchParams.get("error");
   const registered = searchParams.get("registered");
+  const reset = searchParams.get("reset");
   const callbackUrl = resolveCallbackUrl(searchParams.get("callbackUrl"));
 
   useEffect(() => {
@@ -89,6 +90,11 @@ function LoginForm() {
             Cuenta creada. Iniciá sesión con tu email y contraseña.
           </p>
         )}
+        {reset && !error && (
+          <p className="rounded-lg bg-accent/10 p-3 text-sm text-accent-foreground">
+            Contraseña actualizada. Iniciá sesión con tu nueva contraseña.
+          </p>
+        )}
         {error && (
           <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -109,7 +115,15 @@ function LoginForm() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Contraseña</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password">Contraseña</Label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
           <PasswordInput
             id="password"
             name="password"

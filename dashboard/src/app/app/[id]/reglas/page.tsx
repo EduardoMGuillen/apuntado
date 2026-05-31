@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { getBusinessForSession } from "@/lib/business-access";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { RulesForm } from "@/components/dashboard/rules-form";
 import { parseBotPlaybooks } from "@/lib/bot-playbooks";
@@ -13,13 +13,10 @@ export default async function ReglasPage({
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: {
-      whatsappSession: true,
-      subscription: true,
-      settings: true,
-    },
+  const business = await getBusinessForSession(session, params.id, {
+    whatsappSession: true,
+    subscription: true,
+    settings: true,
   });
 
   if (!business) redirect("/app");

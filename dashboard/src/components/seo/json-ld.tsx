@@ -10,10 +10,10 @@ export function JsonLd() {
     url,
     logo: `${url}/icon-512.png`,
     description: siteConfig.description,
-    areaServed: {
+    areaServed: siteConfig.countries.map((name) => ({
       "@type": "Country",
-      name: siteConfig.country,
-    },
+      name,
+    })),
   };
 
   const software = {
@@ -38,7 +38,7 @@ export function JsonLd() {
     name: siteConfig.name,
     url,
     description: siteConfig.description,
-    inLanguage: "es-HN",
+    inLanguage: siteConfig.locale.replace("_", "-"),
     publisher: { "@type": "Organization", name: siteConfig.name },
   };
 

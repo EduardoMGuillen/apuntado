@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
+import { requireBusinessApiAccess } from "@/lib/api-business-guard";
 
 export async function GET(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  const access = await requireBusinessApiAccess(params.id);
+  if (access.response) return access.response;
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-  });
-
-  if (!business) {
-    return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-  }
+  const business = access.business;
 
   const customers = await prisma.customer.findMany({
     where: { businessId: business.id },

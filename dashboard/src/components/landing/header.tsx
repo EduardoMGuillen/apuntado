@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 
 export function LandingHeader() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-brand-dark/80 backdrop-blur-xl">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 lg:h-[4.5rem] lg:px-8">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-brand-dark/80 pt-safe backdrop-blur-xl">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 px-safe lg:h-[4.5rem] lg:px-8">
         <Logo size={36} className="[&_span]:text-white" />
         <nav className="hidden items-center gap-8 md:flex">
           <a

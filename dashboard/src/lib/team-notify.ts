@@ -1,10 +1,12 @@
 import type { Employee, Subscription } from "@prisma/client";
+import { isCentralAmericaPhone } from "@/lib/region";
 
-const HN_PHONE = /^\+504[39]\d{7}$/;
-
-export function isValidHondurasPhone(phone: string): boolean {
-  return HN_PHONE.test(phone.trim());
+export function isValidCentralAmericaPhone(phone: string): boolean {
+  return isCentralAmericaPhone(phone.trim());
 }
+
+/** @deprecated */
+export const isValidHondurasPhone = isValidCentralAmericaPhone;
 
 export function isProPlan(subscription: Subscription | null | undefined): boolean {
   return subscription?.plan === "pro";
@@ -21,7 +23,7 @@ export function resolveTeamNotifyPhones({
 }): string[] {
   const phones = new Set<string>();
 
-  if (notifyPhone?.trim() && isValidHondurasPhone(notifyPhone)) {
+  if (notifyPhone?.trim() && isValidCentralAmericaPhone(notifyPhone)) {
     phones.add(notifyPhone.trim());
   }
 
@@ -29,7 +31,7 @@ export function resolveTeamNotifyPhones({
     for (const employee of employees) {
       if (!employee.isActive) continue;
       const phone = employee.whatsappPhone?.trim();
-      if (phone && isValidHondurasPhone(phone)) {
+      if (phone && isValidCentralAmericaPhone(phone)) {
         phones.add(phone);
       }
     }

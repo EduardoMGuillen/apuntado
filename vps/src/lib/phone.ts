@@ -1,3 +1,5 @@
+import { CA_DIAL_CODES } from "./region.js";
+
 export function normalizeWhatsAppPhone(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return trimmed;
@@ -6,8 +8,13 @@ export function normalizeWhatsAppPhone(input: string): string {
   const digits = trimmed.replace(/\D/g, "");
   if (!digits) return trimmed;
 
-  if (digits.startsWith("504") && digits.length === 11) {
-    return `+${digits}`;
+  for (const code of CA_DIAL_CODES) {
+    if (digits.startsWith(code)) {
+      const localLen = digits.length - code.length;
+      if (localLen >= 7 && localLen <= 8) {
+        return `+${digits}`;
+      }
+    }
   }
 
   if (digits.length === 8 && /^[39]/.test(digits)) {
@@ -22,6 +29,11 @@ export function normalizeWhatsAppPhone(input: string): string {
   return `+${digits}`;
 }
 
-export function isHondurasMobile(phone: string): boolean {
-  return /^\+504[39]\d{7}$/.test(normalizeWhatsAppPhone(phone));
+export function isCentralAmericaMobile(phone: string): boolean {
+  return /^\+(502|503|504|505|506|507)\d{7,8}$/.test(
+    normalizeWhatsAppPhone(phone)
+  );
 }
+
+/** @deprecated */
+export const isHondurasMobile = isCentralAmericaMobile;

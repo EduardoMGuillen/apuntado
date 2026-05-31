@@ -5,6 +5,7 @@ import { BUSINESS_TYPE_VALUES } from "@/lib/business-types";
 import { BOOKING_MODE_VALUES } from "@/lib/booking-modes";
 import { normalizeOfferings } from "@/lib/offerings";
 import { z } from "zod";
+import { CA_PHONE_ERROR, CA_PHONE_REGEX } from "@/lib/region";
 
 const offeringSchema = z.object({
   name: z.string().min(1),
@@ -16,7 +17,7 @@ const businessSchema = z
   .object({
     name: z.string().min(2),
     type: z.enum(BUSINESS_TYPE_VALUES),
-    phone: z.string().regex(/^\+504[39]\d{7}$/, "Formato: +504XXXXXXXX"),
+    phone: z.string().regex(CA_PHONE_REGEX, CA_PHONE_ERROR),
     city: z.string().min(2),
     address: z.string().optional(),
     bookingMode: z.enum(BOOKING_MODE_VALUES),

@@ -15,6 +15,11 @@ import {
 } from "@/lib/booking-modes";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
+import {
+  CA_CITY_PLACEHOLDER,
+  CA_PHONE_HINT,
+  CA_PHONE_PLACEHOLDER,
+} from "@/lib/region";
 
 const DEFAULT_SCHEDULE = [
   { dayOfWeek: 0, openTime: "08:00", closeTime: "12:00", isOpen: false },
@@ -159,8 +164,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen mesh-light">
-      <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col px-4 py-6 sm:max-w-2xl sm:px-6 sm:py-10">
+    <div className="min-h-dvh-screen mesh-light">
+      <div className="mx-auto flex min-h-dvh-screen w-full max-w-xl flex-col px-4 px-safe py-6 pb-safe pt-safe sm:max-w-2xl sm:px-6 sm:py-10">
         <div className="mb-6 flex justify-center sm:mb-8">
           <Logo size={36} />
         </div>
@@ -251,10 +256,10 @@ export default function OnboardingPage() {
                     className="h-11"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+5049XXXXXXX"
+                    placeholder={CA_PHONE_PLACEHOLDER}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Formato Honduras: +504 seguido de 8 dígitos
+                    {CA_PHONE_HINT}
                   </p>
                 </div>
 
@@ -266,7 +271,7 @@ export default function OnboardingPage() {
                       className="h-11"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="Tegucigalpa"
+                      placeholder={CA_CITY_PLACEHOLDER}
                     />
                   </div>
                   <div className="space-y-2">

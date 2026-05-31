@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { resolveUserRole, type UserRole } from "./roles";
 
 async function resolveDbUserId(email: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
@@ -40,7 +41,9 @@ function buildAuthOptions(): NextAuthOptions {
           );
           if (!valid) return null;
 
-          return { id: user.id, email: user.email, name: user.name };
+          const role = await resolveUserRole(user.id, user.email);
+
+          return { id: user.id, email: user.email, name: user.name, role };
         } catch (err) {
           console.error("[auth] credentials authorize failed:", err);
           return null;
@@ -76,11 +79,17 @@ function buildAuthOptions(): NextAuthOptions {
           const email = user.email.trim().toLowerCase();
           const existing = await prisma.user.findUnique({ where: { email } });
           if (!existing) {
+            const role: UserRole = (await import("./roles")).isSuperAdminEmail(
+              email
+            )
+              ? "super_admin"
+              : "user";
             await prisma.user.create({
               data: {
                 email,
                 name: user.name || email,
                 image: user.image,
+                role,
               },
             });
           }
@@ -98,11 +107,22 @@ function buildAuthOptions(): NextAuthOptions {
             if (dbId) {
               token.id = dbId;
               token.sub = dbId;
+              token.role = await resolveUserRole(dbId, user.email);
             }
           } else if (user.id) {
             token.id = user.id;
             token.sub = user.id;
+            if (user.role) {
+              token.role = user.role;
+            } else if (user.email) {
+              token.role = await resolveUserRole(user.id, user.email);
+            }
           }
+        } else if (token.sub && token.email) {
+          token.role = await resolveUserRole(
+            token.sub,
+            token.email as string
+          );
         }
         return token;
       },
@@ -110,6 +130,9 @@ function buildAuthOptions(): NextAuthOptions {
         if (session.user) {
           const id = (token.id as string) || token.sub;
           if (id) session.user.id = id;
+          if (token.role) {
+            session.user.role = token.role as UserRole;
+          }
         }
         return session;
       },

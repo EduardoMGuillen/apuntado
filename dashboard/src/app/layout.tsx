@@ -56,7 +56,7 @@ export const metadata: Metadata = {
         url: siteConfig.ogImage,
         width: siteConfig.ogImageWidth,
         height: siteConfig.ogImageHeight,
-        alt: `${siteConfig.name} — Citas por WhatsApp en ${siteConfig.country}`,
+        alt: `${siteConfig.name} — Citas por WhatsApp en ${siteConfig.region}`,
         type: "image/png",
       },
     ],
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: siteConfig.name,
   },
   formatDetection: {

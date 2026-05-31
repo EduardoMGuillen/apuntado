@@ -341,7 +341,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                 </div>
 
                 {selectedCustomer.manualTakeover && (
-                  <div className="shrink-0 flex flex-col gap-2 border-t bg-background p-3 md:p-4">
+                  <div className="shrink-0 flex flex-col gap-2 border-t bg-background p-3 pb-safe md:p-4 md:pb-4">
                     {sendError && (
                       <p className="text-sm text-destructive">{sendError}</p>
                     )}

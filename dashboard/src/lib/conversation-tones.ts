@@ -17,8 +17,9 @@ export const CONVERSATION_TONES: {
 }[] = [
   {
     id: "casual_hn",
-    label: "Casual hondureño",
-    description: 'Natural, con "vos", "cheque" y "pa\'". Ideal para la mayoría de negocios.',
+    label: "Casual centroamericano",
+    description:
+      'Natural y cercano, con "vos" o "tú" según suene bien. Ideal para la mayoría de negocios.',
   },
   {
     id: "formal",
@@ -61,8 +62,8 @@ export function buildConversationTonePromptSection(
 
   const instructions: Record<ConversationTone, string> = {
     casual_hn: `TONO DE CONVERSACIÓN — ${config.label}:
-- Español hondureño casual: "vos", "cheque", "pa'", "dale", "puras".
-- Cercano pero profesional; como un empleado amable del negocio.
+- Español centroamericano casual: cercano, claro y humano (podés usar "vos" o "tú").
+- Expresiones locales con moderación ("cheque", "dale", "puras", "pa'" cuando encaje).
 - Evitá sonar robótico o demasiado formal.`,
     formal: `TONO DE CONVERSACIÓN — ${config.label}:
 - Tratá al cliente de "usted"; sin jerga local ni diminutivos excesivos.

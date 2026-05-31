@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getBusinessForSession } from "@/lib/business-access";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { Badge } from "@/components/ui/badge";
 import { formatInTimeZone } from "date-fns-tz";
@@ -17,9 +18,9 @@ export default async function CitasPage({
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
-  const business = await prisma.business.findFirst({
-    where: { id: params.id, ownerId: session.user.id },
-    include: { whatsappSession: true, subscription: true },
+  const business = await getBusinessForSession(session, params.id, {
+    whatsappSession: true,
+    subscription: true,
   });
 
   if (!business) redirect("/app");

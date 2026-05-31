@@ -3,8 +3,10 @@ import Image from "next/image";
 import { Logo } from "@/components/logo";
 import { Check } from "lucide-react";
 
+import { CA_FOOTER_FLAGS } from "@/lib/region";
+
 const BULLETS = [
-  "Bot en español hondureño",
+  "Bot en español para Centroamérica",
   "Tu número sigue en tu celular",
   "14 días gratis con tarjeta",
 ];
@@ -29,7 +31,7 @@ export function AuthLayout({
           <blockquote className="font-display text-3xl font-bold leading-tight text-white">
             &ldquo;Desde que conecté Apuntado, dejé de contestar WhatsApp a las 11 de la noche.&rdquo;
           </blockquote>
-          <p className="text-white/60">— Dueño de barbería en Tegucigalpa</p>
+          <p className="text-white/60">— Dueño de barbería en San Salvador</p>
           <ul className="space-y-3">
             {BULLETS.map((b) => (
               <li key={b} className="flex items-center gap-3 text-white/80">
@@ -49,11 +51,11 @@ export function AuthLayout({
             height={48}
             className="rounded-xl opacity-80"
           />
-          <p className="text-sm text-white/50">Apuntado · Honduras 🇭🇳</p>
+          <p className="text-sm text-white/50">Apuntado · Centroamérica {CA_FOOTER_FLAGS}</p>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center bg-background p-6 mesh-light">
+      <div className="flex min-h-dvh-screen flex-1 flex-col items-center justify-center bg-background p-6 pb-safe pt-safe mesh-light px-safe">
         <div className="mb-8 lg:hidden">
           <Logo size={44} />
         </div>

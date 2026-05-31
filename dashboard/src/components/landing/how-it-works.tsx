@@ -7,7 +7,7 @@ const STEPS = [
   {
     step: "02",
     title: "Configurá tu negocio",
-    desc: "Servicios, horarios, empleados y precios en lempiras. El bot aprende tu forma de trabajar.",
+    desc: "Servicios, horarios, empleados y precios en tu moneda local. El bot aprende tu forma de trabajar.",
   },
   {
     step: "03",

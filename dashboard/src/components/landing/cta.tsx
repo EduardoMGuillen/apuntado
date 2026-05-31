@@ -14,7 +14,7 @@ export function LandingCta() {
               Dejá de perder citas por WhatsApp
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg text-white/65">
-              Unite a los negocios en Honduras que ya automatizan sus reservas.
+              Unite a los negocios en Centroamérica que ya automatizan sus reservas.
               Configuración en menos de 10 minutos.
             </p>
             <Link
