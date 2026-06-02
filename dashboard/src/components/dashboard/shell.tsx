@@ -166,7 +166,9 @@ export function DashboardShell({
 
     async function sync() {
       try {
-        const res = await fetch(`/api/business/${business.id}/whatsapp/status`);
+        const res = await fetch(
+          `/api/business/${business.id}/whatsapp/status?ensure=true`
+        );
         if (!res.ok || cancelled) return;
         const data = await res.json();
         if (cancelled) return;

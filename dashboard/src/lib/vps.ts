@@ -35,7 +35,7 @@ export async function startWhatsappSession(
 ) {
   return vpsFetch(`/api/sessions/${businessId}/start`, {
     method: "POST",
-    body: JSON.stringify({ forceQr: options?.forceQr !== false }),
+    body: JSON.stringify({ forceQr: options?.forceQr === true }),
   });
 }
 
@@ -43,8 +43,12 @@ export async function stopWhatsappSession(businessId: string) {
   return vpsFetch(`/api/sessions/${businessId}/stop`, { method: "POST" });
 }
 
-export async function getWhatsappStatus(businessId: string) {
-  return vpsFetch(`/api/sessions/${businessId}/status`);
+export async function getWhatsappStatus(
+  businessId: string,
+  options?: { ensure?: boolean }
+) {
+  const qs = options?.ensure ? "?ensure=true" : "";
+  return vpsFetch(`/api/sessions/${businessId}/status${qs}`);
 }
 
 export async function getWhatsappQr(businessId: string) {

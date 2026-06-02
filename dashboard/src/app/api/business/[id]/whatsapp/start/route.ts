@@ -16,7 +16,7 @@ export async function POST(
     const forceQr =
       typeof body === "object" &&
       body !== null &&
-      (body as { forceQr?: boolean }).forceQr !== false;
+      (body as { forceQr?: boolean }).forceQr === true;
 
     const data = await startWhatsappSession(params.id, { forceQr });
     return NextResponse.json(data);

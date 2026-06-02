@@ -4,16 +4,22 @@ import { getWhatsappStatus } from "@/lib/vps";
 import { requireBusinessApiAccess } from "@/lib/api-business-guard";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const access = await requireBusinessApiAccess(params.id);
   if (access.response) return access.response;
 
+  const ensure =
+    req.nextUrl.searchParams.get("ensure") === "true" ||
+    req.nextUrl.searchParams.get("ensure") === "1";
+
   try {
-    const vpsStatus = (await getWhatsappStatus(params.id)) as {
+    const vpsStatus = (await getWhatsappStatus(params.id, { ensure })) as {
       connected?: boolean;
       hasQr?: boolean;
+      hasPersistedAuth?: boolean;
+      sessionActive?: boolean;
     };
 
     const connected = !!vpsStatus.connected;
@@ -27,6 +33,8 @@ export async function GET(
     return NextResponse.json({
       connected,
       hasQr: !!vpsStatus.hasQr,
+      hasPersistedAuth: !!vpsStatus.hasPersistedAuth,
+      sessionActive: !!vpsStatus.sessionActive,
     });
   } catch (error) {
     const message =
@@ -39,6 +47,8 @@ export async function GET(
     return NextResponse.json({
       connected: row?.connected ?? false,
       hasQr: false,
+      hasPersistedAuth: false,
+      sessionActive: false,
       warning: message,
     });
   }

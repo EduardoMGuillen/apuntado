@@ -77,6 +77,13 @@ export function getQrCode(businessId: string): string | undefined {
   return sessions.get(businessId)?.qr;
 }
 
+/** Hay credenciales guardadas en el volumen (reconectar sin QR). */
+export function hasPersistedAuth(businessId: string): boolean {
+  const authPath = path.join(AUTH_DIR, businessId);
+  if (!fs.existsSync(authPath)) return false;
+  return fs.existsSync(path.join(authPath, "creds.json"));
+}
+
 function teardownSession(businessId: string): void {
   const session = sessions.get(businessId);
   if (!session) return;
@@ -306,11 +313,18 @@ export async function restorePersistedSessions(io: Server): Promise<void> {
 
   console.log(`[WhatsApp] Restaurando ${businessIds.length} sesión(es) guardada(s)…`);
 
-  for (const businessId of businessIds) {
+  for (let i = 0; i < businessIds.length; i++) {
+    const businessId = businessIds[i]!;
+    if (!hasPersistedAuth(businessId)) continue;
+
     try {
       await startSession(businessId, io, { forceQr: false });
     } catch (err) {
       console.error(`[WhatsApp] Error restaurando ${businessId}:`, err);
+    }
+
+    if (i < businessIds.length - 1) {
+      await new Promise((r) => setTimeout(r, 3000));
     }
   }
 }

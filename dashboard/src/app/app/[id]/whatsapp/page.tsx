@@ -29,7 +29,7 @@ export default async function WhatsappPage({
 
   if (searchParams.trial === "ok") {
     try {
-      await startWhatsappSession(business.id);
+      await startWhatsappSession(business.id, { forceQr: true });
     } catch {
       /* VPS puede no estar disponible en desarrollo */
     }

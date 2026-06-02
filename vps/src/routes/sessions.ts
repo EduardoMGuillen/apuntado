@@ -5,6 +5,7 @@ import {
   startSession,
   stopSession,
   getQrCode,
+  hasPersistedAuth,
 } from "../services/whatsapp.js";
 
 export function sessionRouter(io: Server) {
@@ -12,11 +13,26 @@ export function sessionRouter(io: Server) {
 
   router.get("/:businessId/status", async (req, res) => {
     try {
-      const session = getSession(req.params.businessId);
+      const { businessId } = req.params;
+      const ensure =
+        req.query.ensure === "true" || req.query.ensure === "1";
+      let session = getSession(businessId);
+      const persisted = hasPersistedAuth(businessId);
+
+      if (ensure && !session?.connected && persisted && !getQrCode(businessId)) {
+        if (!session) {
+          console.log(`[sessions] Auto-restore ${businessId} (auth en disco)`);
+          await startSession(businessId, io, { forceQr: false });
+          session = getSession(businessId);
+        }
+      }
+
       res.json({
-        businessId: req.params.businessId,
+        businessId,
         connected: session?.connected ?? false,
-        hasQr: !!getQrCode(req.params.businessId),
+        hasQr: !!getQrCode(businessId),
+        hasPersistedAuth: persisted,
+        sessionActive: !!session,
       });
     } catch (error) {
       res.status(500).json({ error: String(error) });
@@ -41,9 +57,9 @@ export function sessionRouter(io: Server) {
           typeof req.body === "object" &&
           (req.body as { forceQr?: boolean }).forceQr === true);
 
-      console.log(`[sessions] POST /start businessId=${businessId} forceQr=${forceQr !== false}`);
+      console.log(`[sessions] POST /start businessId=${businessId} forceQr=${forceQr}`);
 
-      await startSession(businessId, io, { forceQr: forceQr !== false });
+      await startSession(businessId, io, { forceQr });
 
       const qr = getQrCode(businessId);
       console.log(`[sessions] start done businessId=${businessId} hasQr=${!!qr}`);
