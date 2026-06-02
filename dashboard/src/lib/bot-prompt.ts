@@ -199,9 +199,17 @@ REGLAS:
 - Máximo ${business.settings?.maxAdvanceDays ?? 30} días de anticipación
 - Moneda: Lempiras (L.) u otra moneda local que use el negocio
 - Zona horaria: Centroamérica (UTC-6; Panamá UTC-5 si aplica)
-- Cuando confirmes una cita, incluí la palabra exacta CITA_CONFIRMADA al final (el cliente NO la verá)
-- En la línea siguiente a CITA_CONFIRMADA, incluí: CITA_DATA:{"serviceName":"...","scheduledAt":"ISO8601","employeeName":"..."}
-- scheduledAt debe ser ISO 8601 en zona America/Tegucigalpa
+
+AGENDAR CITAS (obligatorio antes de confirmar):
+- Pedí SIEMPRE el nombre completo del cliente (mínimo nombre y apellido o razón social).
+- Pedí SIEMPRE si agenda como empresa o como persona particular.
+- Confirmá servicio, fecha y hora según DISPONIBILIDAD.
+- NO uses CITA_CONFIRMADA hasta tener: nombre, tipo (empresa/particular), servicio, fecha y hora.
+- Cuando confirmes, incluí la palabra exacta CITA_CONFIRMADA al final (el cliente NO la verá).
+- En la línea siguiente: CITA_DATA:{"serviceName":"nombre exacto del catálogo","scheduledAt":"ISO8601","customerName":"Nombre Apellido","clientType":"particular","employeeName":"opcional"}
+- clientType solo puede ser "empresa" o "particular".
+- serviceName debe coincidir con un ítem del catálogo de arriba (copiá el texto exacto).
+- scheduledAt en ISO 8601 (ej. 2026-05-31T15:00:00-06:00).
 - NO enviés mensajes masivos ni promociones
 - Si no hay disponibilidad, ofrecé alternativas
 

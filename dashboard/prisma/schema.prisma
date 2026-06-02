@@ -128,6 +128,7 @@ model Customer {
   whatsappPhone     String
   whatsappReplyJid  String?
   name              String?
+  clientType        String?
   noShowCount   Int           @default(0)
   notes         String?
   manualTakeover Boolean      @default(false)

@@ -51,6 +51,8 @@ function stripConfirmationKeyword(response: string): {
   appointmentData?: {
     serviceName: string;
     scheduledAt: string;
+    customerName: string;
+    clientType: "empresa" | "particular";
     employeeName?: string;
   };
 } {
@@ -60,7 +62,13 @@ function stripConfirmationKeyword(response: string): {
 
   const lines = response.split("\n");
   let appointmentData:
-    | { serviceName: string; scheduledAt: string; employeeName?: string }
+    | {
+        serviceName: string;
+        scheduledAt: string;
+        customerName?: string;
+        clientType?: string;
+        employeeName?: string;
+      }
     | undefined;
 
   for (const line of lines) {
@@ -73,12 +81,39 @@ function stripConfirmationKeyword(response: string): {
     }
   }
 
+  if (appointmentData) {
+    const name = appointmentData.customerName?.trim() ?? "";
+    const type = appointmentData.clientType?.trim().toLowerCase();
+    if (
+      name.length >= 2 &&
+      (type === "empresa" || type === "particular") &&
+      appointmentData.serviceName &&
+      appointmentData.scheduledAt
+    ) {
+      return {
+        clean: response
+          .replace(/CITA_CONFIRMADA/g, "")
+          .replace(/CITA_DATA:.*\n?/g, "")
+          .trim(),
+        confirmed: true,
+        appointmentData: {
+          serviceName: appointmentData.serviceName,
+          scheduledAt: appointmentData.scheduledAt,
+          customerName: name,
+          clientType: type,
+          employeeName: appointmentData.employeeName,
+        },
+      };
+    }
+    console.warn("[Bot] CITA_DATA incompleta — falta nombre o clientType:", appointmentData);
+  }
+
   const clean = response
     .replace(/CITA_CONFIRMADA/g, "")
     .replace(/CITA_DATA:.*\n?/g, "")
     .trim();
 
-  return { clean, confirmed: true, appointmentData };
+  return { clean, confirmed: false };
 }
 
 interface IncomingParams {
@@ -255,16 +290,26 @@ export async function processBotReply(
           await createAppointmentFromBot({
             businessId,
             customerPhone,
-            ...appointmentData,
+            serviceName: appointmentData.serviceName,
+            scheduledAt: appointmentData.scheduledAt,
+            customerName: appointmentData.customerName,
+            clientType: appointmentData.clientType,
+            employeeName: appointmentData.employeeName,
           });
           io.to(`business:${businessId}`).emit("appointment:new", {
             businessId,
             customerPhone,
-            ...appointmentData,
+            customerName: appointmentData.customerName,
+            serviceName: appointmentData.serviceName,
+            scheduledAt: appointmentData.scheduledAt,
           });
         } catch (err) {
           console.error("[Bot] Error creando cita:", err);
+          reply =
+            `${reply}\n\n⚠️ Hubo un problema al registrar la cita en el sistema. El negocio te confirmará por este chat.`.trim();
         }
+      } else if (rawReply.includes("CITA_CONFIRMADA")) {
+        console.warn("[Bot] CITA_CONFIRMADA sin datos válidos — no se guardó en Citas");
       }
 
       if (escalate) {

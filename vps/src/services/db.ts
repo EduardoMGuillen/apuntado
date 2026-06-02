@@ -98,6 +98,8 @@ export async function createAppointmentFromBot(data: {
   customerPhone: string;
   serviceName: string;
   scheduledAt: string;
+  customerName: string;
+  clientType: "empresa" | "particular";
   employeeName?: string;
 }): Promise<void> {
   await apiFetch("/appointments", {

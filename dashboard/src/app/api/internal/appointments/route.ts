@@ -5,23 +5,67 @@ import { addMinutes } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
 import { sendNewAppointmentEmail } from "@/lib/resend";
+import { reconcileCustomerPhone } from "@/lib/customer-phone";
+import { matchServiceByName } from "@/lib/match-service";
+import { DEFAULT_INQUIRY_SERVICE } from "@/lib/booking-modes";
 
 const TZ = "America/Tegucigalpa";
 
+const CLIENT_TYPES = new Set(["empresa", "particular"]);
+
 export const POST = withVpsAuth(async (req: NextRequest) => {
   const body = await req.json();
-  const { businessId, customerPhone, serviceName, scheduledAt, employeeName } = body;
+  const {
+    businessId,
+    customerPhone: rawPhone,
+    serviceName,
+    scheduledAt,
+    employeeName,
+    customerName,
+    clientType,
+  } = body;
 
-  if (!businessId || !customerPhone || !serviceName || !scheduledAt) {
+  if (!businessId || !rawPhone || !serviceName || !scheduledAt) {
     return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
   }
 
-  const service = await prisma.service.findFirst({
-    where: { businessId, name: serviceName, isActive: true },
+  const name = typeof customerName === "string" ? customerName.trim() : "";
+  if (name.length < 2) {
+    return NextResponse.json(
+      { error: "Nombre del cliente requerido (mínimo 2 caracteres)" },
+      { status: 400 }
+    );
+  }
+
+  const type =
+    typeof clientType === "string" ? clientType.trim().toLowerCase() : "";
+  if (!CLIENT_TYPES.has(type)) {
+    return NextResponse.json(
+      { error: "clientType debe ser empresa o particular" },
+      { status: 400 }
+    );
+  }
+
+  const phone = await reconcileCustomerPhone(businessId, rawPhone);
+
+  const services = await prisma.service.findMany({
+    where: { businessId, isActive: true },
   });
 
+  let service = matchServiceByName(services, serviceName);
   if (!service) {
-    return NextResponse.json({ error: "Servicio no encontrado" }, { status: 404 });
+    service = matchServiceByName(services, DEFAULT_INQUIRY_SERVICE.name);
+  }
+
+  if (!service) {
+    return NextResponse.json(
+      {
+        error: "Servicio no encontrado",
+        requested: serviceName,
+        available: services.map((s) => s.name),
+      },
+      { status: 404 }
+    );
   }
 
   let employeeId: string | undefined;
@@ -34,13 +78,33 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
 
   const customer = await prisma.customer.upsert({
     where: {
-      whatsappPhone_businessId: { whatsappPhone: customerPhone, businessId },
+      whatsappPhone_businessId: { whatsappPhone: phone, businessId },
     },
-    create: { businessId, whatsappPhone: customerPhone },
-    update: {},
+    create: {
+      businessId,
+      whatsappPhone: phone,
+      name,
+      clientType: type,
+    },
+    update: {
+      name,
+      clientType: type,
+    },
   });
 
-  const start = new Date(scheduledAt);
+  let start: Date;
+  try {
+    start = new Date(scheduledAt);
+    if (Number.isNaN(start.getTime())) {
+      throw new Error("invalid date");
+    }
+  } catch {
+    return NextResponse.json(
+      { error: "Fecha/hora inválida (scheduledAt ISO8601)" },
+      { status: 400 }
+    );
+  }
+
   const endsAt = addMinutes(start, service.durationMin);
 
   const appointment = await prisma.appointment.create({
@@ -56,6 +120,7 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     include: {
       business: { include: { owner: true } },
       service: true,
+      customer: true,
     },
   });
 
@@ -67,12 +132,16 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     sendNewAppointmentEmail({
       to: appointment.business.owner.email,
       businessName: appointment.business.name,
-      customerPhone,
-      customerName: customer.name,
+      customerPhone: phone,
+      customerName: name,
       serviceName: appointment.service.name,
       scheduledAt: fechaLabel,
     }).catch(console.error);
   }
+
+  console.log(
+    `[Appointments] Cita creada ${appointment.id} — ${name} (${type}) — ${service.name} — ${fechaLabel}`
+  );
 
   return NextResponse.json(appointment);
 });

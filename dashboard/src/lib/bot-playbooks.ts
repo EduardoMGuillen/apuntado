@@ -20,7 +20,7 @@ export const DEFAULT_BOT_PLAYBOOKS: Record<BookingMode, BotPlaybook[]> = {
     {
       when: "quieren agendar una cita",
       action:
-        "Confirmá servicio, día y hora según DISPONIBILIDAD. Solo confirmá con CITA_CONFIRMADA cuando tengas todo claro.",
+        "Pedí nombre completo y si es empresa o persona particular. Confirmá servicio, día y hora. Solo CITA_CONFIRMADA cuando tengas todo.",
     },
     {
       when: "preguntan por eventos, promos o novedades",
