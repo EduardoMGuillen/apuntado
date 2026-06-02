@@ -8,6 +8,7 @@ import { formatInTimeZone } from "date-fns-tz";
 import { es } from "date-fns/locale";
 import { addMinutes } from "date-fns";
 import { resolveBusinessTimezone } from "@/lib/timezones";
+import { isScheduledAtInPast } from "@/lib/business-datetime";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({
@@ -108,7 +109,7 @@ export async function PATCH(
     if (Number.isNaN(newStart.getTime())) {
       return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
     }
-    if (newStart < new Date()) {
+    if (isScheduledAtInPast(newStart, timezone)) {
       return NextResponse.json(
         {
           error:

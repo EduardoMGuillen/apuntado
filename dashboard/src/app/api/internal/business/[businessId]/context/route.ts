@@ -5,8 +5,8 @@ import { buildAvailabilityText, buildSystemPrompt } from "@/lib/bot-prompt";
 import { fetchWebsiteContent } from "@/lib/website-fetch";
 import { getSubscriptionAccess } from "@/lib/subscription";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
-import { addDays, startOfDay } from "date-fns";
 import { resolveBusinessTimezone } from "@/lib/timezones";
+import { getBusinessDayRangeUtc } from "@/lib/business-datetime";
 
 export async function GET(
   req: NextRequest,
@@ -50,17 +50,19 @@ export async function GET(
     },
   });
 
-  const today = startOfDay(new Date());
+  const timezone = resolveBusinessTimezone(business.settings?.timezone);
+  const { start: rangeStart, end: rangeEnd } = getBusinessDayRangeUtc(
+    timezone,
+    3
+  );
   const appointments = await prisma.appointment.findMany({
     where: {
       businessId,
-      scheduledAt: { gte: today, lte: addDays(today, 3) },
+      scheduledAt: { gte: rangeStart, lt: rangeEnd },
       status: { in: ["pending", "confirmed"] },
     },
     select: { scheduledAt: true, endsAt: true },
   });
-
-  const timezone = resolveBusinessTimezone(business.settings?.timezone);
   const availability = buildAvailabilityText(
     business.schedules,
     appointments,

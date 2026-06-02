@@ -1,6 +1,8 @@
-import { formatInTimeZone } from "date-fns-tz";
-import { addDays, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { addDays, startOfDay } from "date-fns";
+import { buildDateContextForPrompt } from "@/lib/business-datetime";
 import type { Business, Service, Schedule, Employee } from "@prisma/client";
 import { getBusinessTypeLabel } from "@/lib/business-types";
 import {
@@ -218,15 +220,16 @@ export function buildAvailabilityText(
   existingAppointments: { scheduledAt: Date; endsAt: Date }[],
   timezone: string = DEFAULT_TZ
 ): string {
-  const today = startOfDay(new Date());
+  const zonedNow = toZonedTime(new Date(), timezone);
+  const todayLocal = startOfDay(zonedNow);
   const lines: string[] = [];
 
   for (let i = 0; i < 3; i++) {
-    const date = addDays(today, i);
-    const dayOfWeek = date.getDay();
+    const dayLocal = addDays(todayLocal, i);
+    const dayOfWeek = dayLocal.getDay();
     const schedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
 
-    const dateLabel = formatInTimeZone(date, timezone, "EEEE d/M", { locale: es });
+    const dateLabel = format(dayLocal, "EEEE d/M/yyyy", { locale: es });
 
     if (!schedule?.isOpen) {
       lines.push(`${dateLabel}: CERRADO`);
@@ -299,6 +302,7 @@ Nunca repitas el mismo texto dos veces. Sé breve y amable.`;
     business.settings?.maxAdvanceDays ?? 30,
     bookingMode
   );
+  const dateContext = buildDateContextForPrompt(timezone);
 
   const notesPrefix = formal
     ? "\nNOTAS ADICIONALES DEL NEGOCIO (respete el tono formal salvo instrucción explícita en contra):\n"
@@ -310,6 +314,8 @@ Nunca repitas el mismo texto dos veces. Sé breve y amable.`;
   return `${intro}
 
 ${toneSection}
+
+${dateContext}
 
 ${catalogSection}
 ${websiteSection}

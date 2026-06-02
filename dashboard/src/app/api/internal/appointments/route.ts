@@ -10,6 +10,7 @@ import { matchServiceByName } from "@/lib/match-service";
 import { DEFAULT_INQUIRY_SERVICE } from "@/lib/booking-modes";
 import { sendPushToBusinessOwner } from "@/lib/push";
 import { resolveBusinessTimezone } from "@/lib/timezones";
+import { isScheduledAtInPast } from "@/lib/business-datetime";
 
 const CLIENT_TYPES = new Set(["empresa", "particular"]);
 
@@ -111,7 +112,7 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     );
   }
 
-  if (start.getTime() <= Date.now()) {
+  if (isScheduledAtInPast(start, timezone)) {
     return NextResponse.json(
       {
         error:
