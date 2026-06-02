@@ -42,7 +42,7 @@ interface Props {
 }
 
 const TZ = "America/Tegucigalpa";
-const MESSAGES_PAGE_SIZE = 30;
+const MESSAGES_PAGE_SIZE = 10;
 
 export function ConversationsClient({ business, customers: initial }: Props) {
   const [customers, setCustomers] = useState(initial);
@@ -268,7 +268,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
           </Button>
         </div>
 
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border md:min-h-[calc(100dvh-11rem)] md:flex-row">
+        <div className="relative flex h-[72dvh] min-h-0 max-h-[72dvh] flex-1 flex-col overflow-hidden rounded-xl border md:h-[calc(100dvh-11rem)] md:max-h-[calc(100dvh-11rem)] md:flex-row">
           <div
             className={cn(
               "flex w-full shrink-0 flex-col overflow-y-auto border-border bg-background md:w-72 md:border-r",
@@ -371,7 +371,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                         onClick={loadOlderMessages}
                         className="bg-background/90 backdrop-blur"
                       >
-                        Ver mensajes anteriores
+                        Ver anteriores
                       </Button>
                     </div>
                   )}

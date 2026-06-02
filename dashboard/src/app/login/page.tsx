@@ -2,8 +2,9 @@
 
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,8 @@ function resolveCallbackUrl(raw: string | null): string {
 }
 
 function LoginForm() {
+  const router = useRouter();
+  const { status } = useSession();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,6 +56,20 @@ function LoginForm() {
       setError(ERROR_MESSAGES[urlError] ?? ERROR_MESSAGES.Default);
     }
   }, [urlError]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(callbackUrl || "/app");
+    }
+  }, [status, router, callbackUrl]);
+
+  if (status === "loading" || status === "authenticated") {
+    return (
+      <AuthLayout title="Bienvenido de vuelta" subtitle="Verificando sesión...">
+        <div className="glass-card h-64 animate-pulse rounded-2xl" />
+      </AuthLayout>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
