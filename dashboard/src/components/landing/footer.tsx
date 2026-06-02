@@ -6,20 +6,26 @@ import { CA_FOOTER_FLAGS } from "@/lib/region";
 export function LandingFooter() {
   return (
     <footer className="border-t bg-card py-12 pb-safe">
-      <div className="container mx-auto flex flex-col items-center justify-between gap-6 px-4 sm:flex-row lg:px-8">
+      <div className="container mx-auto flex flex-col items-center gap-6 px-4 text-center lg:px-8">
         <Logo size={32} />
-        <div className="text-center sm:text-left">
+        <div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Apuntado · Citas por WhatsApp · Centroamérica {CA_FOOTER_FLAGS}
           </p>
-          <PoweredByNexus className="mt-2" />
+          <PoweredByNexus className="mt-2 justify-center" />
         </div>
-        <div className="flex gap-6 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
           <Link href="/login" className="hover:text-foreground">
             Iniciar sesión
           </Link>
           <Link href="/register" className="hover:text-foreground">
             Registrarse
+          </Link>
+          <Link href="/terminos" className="hover:text-foreground">
+            Términos
+          </Link>
+          <Link href="/politicas" className="hover:text-foreground">
+            Políticas
           </Link>
         </div>
       </div>
