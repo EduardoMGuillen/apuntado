@@ -61,7 +61,10 @@ export function getSubscriptionAccess(
   if (sub.status === "active") {
     const inTrial = sub.trialEndsAt && sub.trialEndsAt > now;
     const hasStripe = !!sub.stripeSubscriptionId;
-    if (hasStripe || inTrial) {
+    const periodValid =
+      !!sub.currentPeriodEnd && sub.currentPeriodEnd > now;
+    // Activo si: trial vigente, Stripe/simulado, o periodo de facturación válido
+    if (hasStripe || inTrial || periodValid) {
       return {
         active: true,
         reason: inTrial ? "trial" : "paid",

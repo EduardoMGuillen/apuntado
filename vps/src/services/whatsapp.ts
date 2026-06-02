@@ -11,7 +11,7 @@ import type { Server } from "socket.io";
 import { extractCustomerIdentityFromMessage } from "../lib/message-phone.js";
 import { getIncomingMessageText } from "../lib/message-body.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
-import { handleIncomingMessage } from "./bot-handler.js";
+import { enqueueIncomingMessage } from "./message-buffer.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
 import fs from "fs";
@@ -244,13 +244,23 @@ export async function startSession(
       if (!msg.message) continue;
 
       const identity = extractCustomerIdentityFromMessage(msg);
-      if (!identity) continue;
+      if (!identity) {
+        console.warn(`[WhatsApp] Mensaje sin identidad (${businessId})`, {
+          remoteJid: msg.key.remoteJid,
+        });
+        continue;
+      }
 
       const body = getIncomingMessageText(msg).trim();
-      if (!body) continue;
+      if (!body) {
+        console.log(
+          `[WhatsApp] Mensaje sin texto (${identity.customerPhone}) — tipo multimedia u omitido`
+        );
+        continue;
+      }
 
       try {
-        await handleIncomingMessage({
+        enqueueIncomingMessage({
           businessId,
           customerPhone: identity.customerPhone,
           replyJid: identity.replyJid,
@@ -260,7 +270,7 @@ export async function startSession(
         });
       } catch (err) {
         console.error(
-          `[WhatsApp] Error procesando mensaje (${identity.customerPhone}):`,
+          `[WhatsApp] Error encolando mensaje (${identity.customerPhone}):`,
           err
         );
       }

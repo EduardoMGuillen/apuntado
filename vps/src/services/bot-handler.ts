@@ -59,7 +59,9 @@ function stripConfirmationKeyword(response: string): {
   }
 
   const lines = response.split("\n");
-  let appointmentData: { serviceName: string; scheduledAt: string; employeeName?: string } | undefined;
+  let appointmentData:
+    | { serviceName: string; scheduledAt: string; employeeName?: string }
+    | undefined;
 
   for (const line of lines) {
     if (line.startsWith("CITA_DATA:")) {
@@ -88,16 +90,14 @@ interface IncomingParams {
   io: Server;
 }
 
-export async function handleIncomingMessage({
+/** Persiste mensaje entrante y notifica al panel (sin generar respuesta del bot). */
+export async function notifyIncomingMessage({
   businessId,
   customerPhone,
   replyJid,
   body,
-  sock,
   io,
 }: IncomingParams): Promise<void> {
-  console.log(`[Bot] Mensaje de ${customerPhone} → ${businessId}`);
-
   await saveIncomingMessage(businessId, customerPhone, body, replyJid);
 
   io.to(`business:${businessId}`).emit("message:new", {
@@ -107,18 +107,81 @@ export async function handleIncomingMessage({
     fromClient: true,
     createdAt: new Date().toISOString(),
   });
+}
 
-  const context = await getBusinessContext(businessId, customerPhone);
+async function sendBotText(
+  params: IncomingParams,
+  reply: string,
+  menu?: ReturnType<typeof parseReplyMenu>["menu"]
+): Promise<void> {
+  const sentText = await sendReplyWithMenu(
+    params.sock,
+    params.replyJid,
+    reply,
+    menu
+  );
+  await saveOutgoingMessage(
+    params.businessId,
+    params.customerPhone,
+    sentText,
+    params.replyJid
+  );
+
+  params.io.to(`business:${params.businessId}`).emit("message:new", {
+    businessId: params.businessId,
+    customerPhone: params.customerPhone,
+    body: sentText,
+    fromClient: false,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export interface ProcessBotReplyParams {
+  businessId: string;
+  customerPhone: string;
+  replyJid: string;
+  combinedBody: string;
+  sock: WASocket;
+  io: Server;
+}
+
+/** Genera y envía la respuesta del bot (mensajes ya guardados en DB). */
+export async function processBotReply(
+  params: ProcessBotReplyParams
+): Promise<void> {
+  const { businessId, customerPhone, replyJid, combinedBody, sock, io } =
+    params;
+
+  console.log(
+    `[Bot] Procesando respuesta para ${customerPhone} → ${businessId}`
+  );
+
+  const sockParams: IncomingParams = {
+    businessId,
+    customerPhone,
+    replyJid,
+    body: combinedBody,
+    sock,
+    io,
+  };
+
+  let context;
+  try {
+    context = await getBusinessContext(businessId, customerPhone);
+  } catch (err) {
+    console.error("[Bot] Error obteniendo contexto del dashboard:", err);
+    await sendBotText(
+      sockParams,
+      "Disculpá, el asistente no pudo cargar la configuración del negocio. Intentá de nuevo en un momento. 🙏"
+    );
+    return;
+  }
 
   if (!context.subscriptionActive) {
-    console.warn(`[Bot] Suscripción inactiva para negocio ${businessId}`);
-    await sock.sendMessage(replyJid, { text: SUBSCRIPTION_INACTIVE_MESSAGE });
-    await saveOutgoingMessage(
-      businessId,
-      customerPhone,
-      SUBSCRIPTION_INACTIVE_MESSAGE,
-      replyJid
+    console.warn(
+      `[Bot] Suscripción inactiva (${context.name} / ${businessId}) — plan no permite bot`
     );
+    await sendBotText(sockParams, SUBSCRIPTION_INACTIVE_MESSAGE);
     return;
   }
 
@@ -134,7 +197,7 @@ export async function handleIncomingMessage({
   let reply: string;
   let replyMenu: ReturnType<typeof parseReplyMenu>["menu"] = undefined;
 
-  if (isTrivialMessage(body)) {
+  if (isTrivialMessage(combinedBody)) {
     reply = randomTrivialReply();
   } else {
     const anthropic = getAnthropicClient();
@@ -143,102 +206,108 @@ export async function handleIncomingMessage({
       reply =
         "Hola, el asistente está en configuración. El negocio te responderá pronto. 🙏";
     } else {
-    const history = await getMessageHistory(businessId, customerPhone);
+      const history = await getMessageHistory(businessId, customerPhone);
 
-    const messages: Anthropic.MessageParam[] = [
-      ...history.map((m) => ({
+      const messages: Anthropic.MessageParam[] = history.map((m) => ({
         role: m.fromClient ? ("user" as const) : ("assistant" as const),
         content: m.body,
-      })),
-      { role: "user", content: body },
-    ];
+      }));
 
-    let response;
-    try {
-      response = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 512,
-        system: context.systemPrompt,
-        messages,
-      });
-    } catch (err) {
-      console.error("[Bot] Error Anthropic:", err);
+      if (messages.length === 0) {
+        messages.push({ role: "user", content: combinedBody });
+      }
+
+      let response;
+      try {
+        response = await anthropic.messages.create({
+          model: MODEL,
+          max_tokens: 512,
+          system: context.systemPrompt,
+          messages,
+        });
+      } catch (err) {
+        console.error("[Bot] Error Anthropic:", err);
+        await sendBotText(
+          sockParams,
+          "Disculpá, tuve un problemita técnico. ¿Podés escribir de nuevo en un momento? 🙏"
+        );
+        return;
+      }
+
+      const textBlock = response.content.find((b) => b.type === "text");
+      const rawReply =
+        textBlock?.type === "text"
+          ? textBlock.text
+          : "Disculpá, tuve un problemita. ¿Podés repetir?";
+
+      const { clean, confirmed, appointmentData } =
+        stripConfirmationKeyword(rawReply);
+      const { clean: afterEscalation, escalate, reason } =
+        stripEscalationKeyword(clean);
+      const parsedMenu = parseReplyMenu(afterEscalation);
       reply =
-        "Disculpá, tuve un problemita técnico. ¿Podés escribir de nuevo en un momento? 🙏";
-      const sentText = await sendReplyWithMenu(sock, replyJid, reply, undefined);
-      await saveOutgoingMessage(businessId, customerPhone, sentText, replyJid);
-      io.to(`business:${businessId}`).emit("message:new", {
-        businessId,
-        customerPhone,
-        body: sentText,
-        fromClient: false,
-        createdAt: new Date().toISOString(),
-      });
-      return;
-    }
+        parsedMenu.clean ||
+        (escalate ? DEFAULT_ESCALATION_REPLY : afterEscalation);
+      replyMenu = parsedMenu.menu;
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const rawReply = textBlock?.type === "text" ? textBlock.text : "Disculpá, tuve un problemita. ¿Podés repetir?";
-
-    const { clean, confirmed, appointmentData } = stripConfirmationKeyword(rawReply);
-    const { clean: afterEscalation, escalate, reason } =
-      stripEscalationKeyword(clean);
-    const parsedMenu = parseReplyMenu(afterEscalation);
-    reply = parsedMenu.clean || (escalate ? DEFAULT_ESCALATION_REPLY : afterEscalation);
-    replyMenu = parsedMenu.menu;
-
-    if (confirmed && appointmentData) {
-      try {
-        await createAppointmentFromBot({
-          businessId,
-          customerPhone,
-          ...appointmentData,
-        });
-        io.to(`business:${businessId}`).emit("appointment:new", {
-          businessId,
-          customerPhone,
-          ...appointmentData,
-        });
-      } catch (err) {
-        console.error("[Bot] Error creando cita:", err);
-      }
-    }
-
-    if (escalate) {
-      try {
-        const escalation = await escalateToAgent({
-          businessId,
-          customerPhone,
-          customerMessage: body,
-          reason,
-        });
-
-        for (const phone of escalation.notifyPhones) {
-          const teamJid = phone.replace("+", "") + "@s.whatsapp.net";
-          await sock.sendMessage(teamJid, { text: escalation.alertMessage });
+      if (confirmed && appointmentData) {
+        try {
+          await createAppointmentFromBot({
+            businessId,
+            customerPhone,
+            ...appointmentData,
+          });
+          io.to(`business:${businessId}`).emit("appointment:new", {
+            businessId,
+            customerPhone,
+            ...appointmentData,
+          });
+        } catch (err) {
+          console.error("[Bot] Error creando cita:", err);
         }
-
-        io.to(`business:${businessId}`).emit("takeover:waiting", {
-          businessId,
-          customerPhone,
-          escalated: true,
-        });
-      } catch (err) {
-        console.error("[Bot] Error escalando a agente:", err);
       }
-    }
+
+      if (escalate) {
+        try {
+          const escalation = await escalateToAgent({
+            businessId,
+            customerPhone,
+            customerMessage: combinedBody,
+            reason,
+          });
+
+          for (const phone of escalation.notifyPhones) {
+            const teamJid = phone.replace("+", "") + "@s.whatsapp.net";
+            await sock.sendMessage(teamJid, { text: escalation.alertMessage });
+          }
+
+          io.to(`business:${businessId}`).emit("takeover:waiting", {
+            businessId,
+            customerPhone,
+            escalated: true,
+          });
+        } catch (err) {
+          console.error("[Bot] Error escalando a agente:", err);
+        }
+      }
     }
   }
 
-  const sentText = await sendReplyWithMenu(sock, replyJid, reply, replyMenu);
   console.log(`[Bot] Respuesta enviada a ${customerPhone}`);
-  await saveOutgoingMessage(businessId, customerPhone, sentText, replyJid);
+  await sendBotText(sockParams, reply, replyMenu);
+}
 
-  io.to(`business:${businessId}`).emit("message:new", {
-    businessId,
-    customerPhone,
-    body: sentText,
-    fromClient: false,
-    createdAt: new Date().toISOString(),
+/** Sin debounce: guarda y responde al instante (tests o uso directo). */
+export async function handleIncomingMessage(
+  params: IncomingParams
+): Promise<void> {
+  await notifyIncomingMessage(params);
+  await processBotReply({
+    businessId: params.businessId,
+    customerPhone: params.customerPhone,
+    replyJid: params.replyJid,
+    combinedBody: params.body,
+    sock: params.sock,
+    io: params.io,
   });
 }
