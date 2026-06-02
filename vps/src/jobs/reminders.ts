@@ -24,7 +24,12 @@ export function startReminderJob(): void {
             : `¡Hola ${nombre}! 👋 Te recordamos tu cita en *${apt.businessName}* para *${apt.serviceName}* el ${fecha}. Si necesitás cambiarla, escribinos. ¡Te esperamos!`;
 
         try {
-          await sendMessage(apt.businessId, apt.customerPhone, msg);
+          await sendMessage(
+            apt.businessId,
+            apt.customerPhone,
+            msg,
+            apt.customerReplyJid ?? undefined
+          );
         } catch (err) {
           console.error(`[Reminder] Error enviando a ${apt.customerPhone}:`, err);
         }

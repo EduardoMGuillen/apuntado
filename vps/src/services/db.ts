@@ -158,6 +158,7 @@ export async function getAppointmentsForReminder(): Promise<
   {
     businessId: string;
     customerPhone: string;
+    customerReplyJid?: string | null;
     customerName: string | null;
     businessName: string;
     scheduledAt: string;

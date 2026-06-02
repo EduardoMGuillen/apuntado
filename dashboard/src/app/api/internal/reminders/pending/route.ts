@@ -71,24 +71,23 @@ export const GET = withVpsAuth(async () => {
     });
   }
 
-  const payload24h = toRemind24h.map((a) => ({
+  const mapReminder = (a: (typeof toRemind24h)[number]) => ({
     businessId: a.businessId,
     customerPhone: a.customer.whatsappPhone,
+    customerReplyJid: a.customer.whatsappReplyJid,
     customerName: a.customer.name,
     businessName: a.business.name,
     scheduledAt: a.scheduledAt.toISOString(),
     serviceName: a.service.name,
     timezone: resolveBusinessTimezone(a.business.settings?.timezone),
+  });
+
+  const payload24h = toRemind24h.map((a) => ({
+    ...mapReminder(a),
     reminderType: "24h" as const,
   }));
   const payload1h = toRemind1h.map((a) => ({
-    businessId: a.businessId,
-    customerPhone: a.customer.whatsappPhone,
-    customerName: a.customer.name,
-    businessName: a.business.name,
-    scheduledAt: a.scheduledAt.toISOString(),
-    serviceName: a.service.name,
-    timezone: resolveBusinessTimezone(a.business.settings?.timezone),
+    ...mapReminder(a),
     reminderType: "1h" as const,
   }));
 
