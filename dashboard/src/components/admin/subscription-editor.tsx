@@ -59,6 +59,37 @@ export function AdminSubscriptionEditor({
     }
   }
 
+  async function extendTrial15Days() {
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch(`/api/admin/businesses/${businessId}/subscription`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "extend_trial_15",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Error al extender prueba");
+        return;
+      }
+      setMessage(
+        data.stripeSynced
+          ? "Prueba extendida +15 días (Stripe sincronizado)."
+          : data.stripeNote
+            ? `Prueba extendida +15 días. ${data.stripeNote}`
+            : "Prueba extendida +15 días."
+      );
+      window.location.reload();
+    } catch {
+      setMessage("Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div>
       <Button
@@ -112,6 +143,16 @@ export function AdminSubscriptionEditor({
           {message && (
             <p className="text-xs text-muted-foreground">{message}</p>
           )}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="rounded-full w-full"
+            disabled={loading}
+            onClick={extendTrial15Days}
+          >
+            {loading ? "Procesando..." : "+15 días de prueba"}
+          </Button>
           <Button
             type="button"
             size="sm"

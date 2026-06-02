@@ -174,9 +174,40 @@ export function SubscriptionPlans({
         )}
 
       {hasStripeCustomer && !stripeSimulate && (
-        <Button variant="outline" onClick={openPortal} disabled={loading === "portal"}>
-          {loading === "portal" ? "Abriendo..." : "Administrar facturación"}
-        </Button>
+        <div className="space-y-3 rounded-lg border p-4">
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>
+              Si cancelás, Stripe detiene la renovación automática y mantenés acceso
+              hasta el fin de tu periodo actual.
+            </p>
+            {access.currentPeriodEnd && (
+              <p>
+                Fin del periodo actual:{" "}
+                <strong>
+                  {new Date(access.currentPeriodEnd).toLocaleDateString("es", {
+                    dateStyle: "long",
+                  })}
+                </strong>
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={openPortal}
+              disabled={loading === "portal"}
+            >
+              {loading === "portal" ? "Abriendo..." : "Administrar facturación"}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={openPortal}
+              disabled={loading === "portal"}
+            >
+              {loading === "portal" ? "Abriendo..." : "Cancelar suscripción"}
+            </Button>
+          </div>
+        </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-2">

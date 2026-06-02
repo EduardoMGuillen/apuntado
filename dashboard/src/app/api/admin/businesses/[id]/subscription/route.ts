@@ -3,12 +3,21 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { isSuperAdminSession } from "@/lib/business-access";
+import { getStripe } from "@/lib/stripe";
+import { isSimulatedStripeId, isStripeConfigured } from "@/lib/stripe-config";
 
-const patchSchema = z.object({
+const editSchema = z.object({
+  action: z.literal("edit").optional(),
   plan: z.enum(["trial", "basic", "pro"]).optional(),
   status: z.enum(["active", "past_due", "canceled", "expired"]).optional(),
   trialEndsAt: z.string().nullable().optional(),
 });
+
+const extendSchema = z.object({
+  action: z.literal("extend_trial_15"),
+});
+
+const patchSchema = z.union([editSchema, extendSchema]);
 
 export async function PATCH(
   req: NextRequest,
@@ -31,6 +40,66 @@ export async function PATCH(
   try {
     const body = await req.json();
     const data = patchSchema.parse(body);
+
+    if (data.action === "extend_trial_15") {
+      const now = new Date();
+      const currentTrial = business.subscription?.trialEndsAt;
+      const baseDate =
+        currentTrial && currentTrial > now ? currentTrial : now;
+      const nextTrialEndsAt = new Date(baseDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+
+      const subscription = business.subscription
+        ? await prisma.subscription.update({
+            where: { businessId: business.id },
+            data: {
+              trialEndsAt: nextTrialEndsAt,
+              status: "active",
+            },
+          })
+        : await prisma.subscription.create({
+            data: {
+              businessId: business.id,
+              plan: "trial",
+              status: "active",
+              trialEndsAt: nextTrialEndsAt,
+            },
+          });
+
+      let stripeSynced = false;
+      let stripeNote: string | null = null;
+
+      if (
+        subscription.stripeSubscriptionId &&
+        !isSimulatedStripeId(subscription.stripeSubscriptionId) &&
+        isStripeConfigured()
+      ) {
+        try {
+          const stripe = getStripe();
+          const stripeSub = await stripe.subscriptions.retrieve(
+            subscription.stripeSubscriptionId
+          );
+          if (stripeSub.status === "trialing") {
+            await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+              trial_end: Math.floor(nextTrialEndsAt.getTime() / 1000),
+              proration_behavior: "none",
+            });
+            stripeSynced = true;
+          } else {
+            stripeNote = "La suscripción de Stripe no está en trialing; no se modificó trial_end en Stripe.";
+          }
+        } catch (err) {
+          console.error("[Admin subscription] Error sincronizando trial con Stripe:", err);
+          stripeNote = "No se pudo sincronizar el trial en Stripe.";
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        trialEndsAt: nextTrialEndsAt.toISOString(),
+        stripeSynced,
+        stripeNote,
+      });
+    }
 
     const trialEndsAt =
       data.trialEndsAt === null
