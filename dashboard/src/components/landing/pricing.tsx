@@ -6,7 +6,7 @@ import { Check } from "lucide-react";
 const PLANS = [
   {
     name: "Básico",
-    price: "15",
+    price: "20",
     desc: "Ideal para negocios con un empleado",
     features: [
       "Bot WhatsApp 24/7",
@@ -19,7 +19,7 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "30",
+    price: "35",
     desc: "Para más volumen y varios empleados",
     features: [
       "Todo lo del plan Básico",

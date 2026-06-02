@@ -24,7 +24,7 @@ export function JsonLd() {
     operatingSystem: "Web",
     offers: {
       "@type": "Offer",
-      price: "15",
+      price: "20",
       priceCurrency: "USD",
     },
     description: siteConfig.description,

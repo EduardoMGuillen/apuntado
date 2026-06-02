@@ -14,7 +14,7 @@ export const PLANS: Record<
 > = {
   basic: {
     name: "Básico",
-    priceLabel: "$15/mes",
+    priceLabel: "$20/mes",
     description: "Ideal para negocios pequeños con un solo empleado.",
     features: [
       "Bot de WhatsApp 24/7",
@@ -25,7 +25,7 @@ export const PLANS: Record<
   },
   pro: {
     name: "Pro",
-    priceLabel: "$30/mes",
+    priceLabel: "$35/mes",
     description: "Para negocios con varios empleados y más volumen.",
     features: [
       "Todo lo del plan Básico",

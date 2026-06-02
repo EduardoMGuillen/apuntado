@@ -30,7 +30,7 @@ const PLANS_UI: Record<
 > = {
   basic: {
     name: "Básico",
-    price: "$15",
+    price: "$20",
     description: "Para negocios pequeños",
     features: [
       "Bot WhatsApp 24/7",
@@ -41,7 +41,7 @@ const PLANS_UI: Record<
   },
   pro: {
     name: "Pro",
-    price: "$30",
+    price: "$35",
     description: "Para más volumen",
     features: [
       "Todo lo del Básico",
