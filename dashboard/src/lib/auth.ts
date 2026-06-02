@@ -14,6 +14,13 @@ async function resolveDbUserId(email: string): Promise<string | null> {
 }
 
 function buildAuthOptions(): NextAuthOptions {
+  const secureCookie =
+    process.env.NEXTAUTH_URL?.startsWith("https://") ||
+    process.env.NODE_ENV === "production";
+  const sessionCookieName = secureCookie
+    ? "__Secure-next-auth.session-token"
+    : "next-auth.session-token";
+
   const providers: NextAuthOptions["providers"] = [
     CredentialsProvider({
       id: "credentials",
@@ -67,6 +74,18 @@ function buildAuthOptions(): NextAuthOptions {
     session: {
       strategy: "jwt",
       maxAge: 30 * 24 * 60 * 60,
+    },
+    cookies: {
+      sessionToken: {
+        name: sessionCookieName,
+        options: {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          secure: !!secureCookie,
+          maxAge: 30 * 24 * 60 * 60,
+        },
+      },
     },
     pages: {
       signIn: "/login",

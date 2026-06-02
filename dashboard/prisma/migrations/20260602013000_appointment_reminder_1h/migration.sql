@@ -1,0 +1,2 @@
+ALTER TABLE "Appointment"
+ADD COLUMN IF NOT EXISTS "reminder1hSent" BOOLEAN NOT NULL DEFAULT false;

@@ -19,7 +19,7 @@ import {
   parseConversationTone,
 } from "@/lib/conversation-tones";
 
-const TZ = "America/Tegucigalpa";
+const DEFAULT_TZ = "America/Tegucigalpa";
 
 const DAY_NAMES = [
   "domingo",
@@ -102,7 +102,8 @@ export function formatPriceHNL(amount: number | string): string {
 
 export function buildAvailabilityText(
   schedules: Schedule[],
-  existingAppointments: { scheduledAt: Date; endsAt: Date }[]
+  existingAppointments: { scheduledAt: Date; endsAt: Date }[],
+  timezone: string = DEFAULT_TZ
 ): string {
   const today = startOfDay(new Date());
   const lines: string[] = [];
@@ -112,7 +113,7 @@ export function buildAvailabilityText(
     const dayOfWeek = date.getDay();
     const schedule = schedules.find((s) => s.dayOfWeek === dayOfWeek);
 
-    const dateLabel = formatInTimeZone(date, TZ, "EEEE d/M", { locale: es });
+    const dateLabel = formatInTimeZone(date, timezone, "EEEE d/M", { locale: es });
 
     if (!schedule?.isOpen) {
       lines.push(`${dateLabel}: CERRADO`);
@@ -125,7 +126,7 @@ export function buildAvailabilityText(
   if (existingAppointments.length > 0) {
     lines.push("\nCitas ya agendadas (próximos 3 días):");
     for (const apt of existingAppointments) {
-      const time = formatInTimeZone(apt.scheduledAt, TZ, "EEE d/M HH:mm", { locale: es });
+      const time = formatInTimeZone(apt.scheduledAt, timezone, "EEE d/M HH:mm", { locale: es });
       lines.push(`- ${time}`);
     }
   }
@@ -135,7 +136,8 @@ export function buildAvailabilityText(
 
 export function buildSystemPrompt(
   business: BusinessWithRelations,
-  availability: string
+  availability: string,
+  timezone: string = DEFAULT_TZ
 ): string {
   const bookingMode = (business.settings?.bookingMode ?? "services") as BookingMode;
   const catalogSection = buildCatalogSection(business.services, bookingMode);
@@ -198,18 +200,19 @@ REGLAS:
 - Anticipación mínima: ${business.settings?.minAdvanceMinutes ?? 120} minutos
 - Máximo ${business.settings?.maxAdvanceDays ?? 30} días de anticipación
 - Moneda: Lempiras (L.) u otra moneda local que use el negocio
-- Zona horaria: Centroamérica (UTC-6; Panamá UTC-5 si aplica)
+- Zona horaria del negocio: ${timezone}
 
 AGENDAR CITAS (obligatorio antes de confirmar):
-- Pedí SIEMPRE el nombre completo del cliente (mínimo nombre y apellido o razón social).
-- Pedí SIEMPRE si agenda como empresa o como persona particular.
+- Pedí nombre completo y tipo de cliente (empresa o particular) SOLO si aún no lo tenés.
+- Si en el historial o en DATOS DEL CLIENTE ya aparece nombre o tipo, NO lo preguntés de nuevo.
 - Confirmá servicio, fecha y hora según DISPONIBILIDAD.
 - NO uses CITA_CONFIRMADA hasta tener: nombre, tipo (empresa/particular), servicio, fecha y hora.
 - Cuando confirmes, incluí la palabra exacta CITA_CONFIRMADA al final (el cliente NO la verá).
 - En la línea siguiente: CITA_DATA:{"serviceName":"nombre exacto del catálogo","scheduledAt":"ISO8601","customerName":"Nombre Apellido","clientType":"particular","employeeName":"opcional"}
 - clientType solo puede ser "empresa" o "particular".
 - serviceName debe coincidir con un ítem del catálogo de arriba (copiá el texto exacto).
-- scheduledAt en ISO 8601 (ej. 2026-05-31T15:00:00-06:00).
+- scheduledAt en ISO 8601 y en la zona horaria ${timezone} (ej. 2026-05-31T15:00:00-06:00).
+- NO permitás agendar en horarios/fechas ya pasadas para la zona horaria del negocio.
 - NO enviés mensajes masivos ni promociones
 - Si no hay disponibilidad, ofrecé alternativas
 

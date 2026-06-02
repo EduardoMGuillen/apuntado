@@ -28,6 +28,7 @@ export interface BusinessContext {
   type: string;
   phone: string;
   city: string;
+  timezone?: string;
   manualTakeover: boolean;
   takenOverAt: string | null;
   subscriptionActive: boolean;
@@ -161,6 +162,8 @@ export async function getAppointmentsForReminder(): Promise<
     businessName: string;
     scheduledAt: string;
     serviceName: string;
+    timezone?: string;
+    reminderType: "24h" | "1h";
   }[]
 > {
   return apiFetch("/reminders/pending");

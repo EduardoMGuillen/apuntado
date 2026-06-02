@@ -8,8 +8,8 @@ import { sendNewAppointmentEmail } from "@/lib/resend";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
 import { matchServiceByName } from "@/lib/match-service";
 import { DEFAULT_INQUIRY_SERVICE } from "@/lib/booking-modes";
-
-const TZ = "America/Tegucigalpa";
+import { sendPushToBusinessOwner } from "@/lib/push";
+import { resolveBusinessTimezone } from "@/lib/timezones";
 
 const CLIENT_TYPES = new Set(["empresa", "particular"]);
 
@@ -76,6 +76,12 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     employeeId = employee?.id;
   }
 
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { settings: { select: { timezone: true } } },
+  });
+  const timezone = resolveBusinessTimezone(business?.settings?.timezone);
+
   const customer = await prisma.customer.upsert({
     where: {
       whatsappPhone_businessId: { whatsappPhone: phone, businessId },
@@ -105,6 +111,16 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     );
   }
 
+  if (start.getTime() <= Date.now()) {
+    return NextResponse.json(
+      {
+        error:
+          "No se puede agendar en una fecha/hora pasada para la zona horaria del negocio.",
+      },
+      { status: 400 }
+    );
+  }
+
   const endsAt = addMinutes(start, service.durationMin);
 
   const appointment = await prisma.appointment.create({
@@ -124,9 +140,14 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
     },
   });
 
-  const fechaLabel = formatInTimeZone(start, TZ, "EEEE d 'de' MMMM · h:mm a", {
+  const fechaLabel = formatInTimeZone(
+    start,
+    timezone,
+    "EEEE d 'de' MMMM · h:mm a",
+    {
     locale: es,
-  });
+    }
+  );
 
   if (appointment.business.owner.email) {
     sendNewAppointmentEmail({
@@ -138,6 +159,13 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
       scheduledAt: fechaLabel,
     }).catch(console.error);
   }
+
+  await sendPushToBusinessOwner(businessId, {
+    title: "Nueva cita agendada",
+    body: `${name} • ${appointment.service.name} • ${fechaLabel}`,
+    url: `/app/${businessId}/citas`,
+    tag: `apt-${businessId}`,
+  });
 
   console.log(
     `[Appointments] Cita creada ${appointment.id} — ${name} (${type}) — ${service.name} — ${fechaLabel}`

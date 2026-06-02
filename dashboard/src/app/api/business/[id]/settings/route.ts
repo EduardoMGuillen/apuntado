@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isProPlan } from "@/lib/team-notify";
 import { verifyBusinessAccess } from "@/lib/business-access";
 import { CA_PHONE_ERROR, CA_PHONE_REGEX } from "@/lib/region";
+import { isBusinessTimezone } from "@/lib/timezones";
 
 const playbookSchema = z.object({
   when: z.string().min(3).max(200),
@@ -21,6 +22,10 @@ const patchSchema = z.object({
   minAdvanceMinutes: z.number().min(0).max(1440).optional(),
   maxAdvanceDays: z.number().min(1).max(90).optional(),
   reminder24h: z.boolean().optional(),
+  timezone: z
+    .string()
+    .refine((v) => isBusinessTimezone(v), "Zona horaria inválida")
+    .optional(),
   websiteUrl: z.string().max(500).nullable().optional(),
   notifyPhone: z
     .union([z.string().regex(CA_PHONE_REGEX, CA_PHONE_ERROR), z.literal(""), z.null()])

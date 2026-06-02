@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PoweredByNexus } from "@/components/powered-by-nexus";
+import { PushToggle } from "@/components/dashboard/push-toggle";
 
 interface Business {
   id: string;
@@ -220,6 +221,7 @@ export function DashboardShell({
         </nav>
         <div className="space-y-2 border-t border-white/10 p-3">
           <PoweredByNexus className="px-3 text-white/40 [&_a]:text-white/55 [&_a:hover]:text-white" />
+          <PushToggle />
           <Link
             href="/app/cuenta"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white"
@@ -288,6 +290,7 @@ export function DashboardShell({
               </nav>
               <div className="space-y-2 border-t border-white/10 p-3 pb-safe px-safe">
                 <PoweredByNexus className="px-3 text-white/40 [&_a]:text-white/55" />
+                <PushToggle />
                 <Link
                   href="/app/cuenta"
                   onClick={closeMenu}

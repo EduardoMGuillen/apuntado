@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isProPlan } from "@/lib/team-notify";
 import { getSubscriptionAccess } from "@/lib/subscription";
+import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 export default async function ConfigPage({
   params,
@@ -43,6 +44,7 @@ export default async function ConfigPage({
     minAdvanceMinutes: 120,
     maxAdvanceDays: 30,
     reminder24h: true,
+    timezone: DEFAULT_TIMEZONE,
     websiteUrl: null as string | null,
     notifyPhone: null as string | null,
     teamMembers: [] as { id?: string; name: string; whatsappPhone: string }[],
@@ -75,6 +77,7 @@ export default async function ConfigPage({
               business.settings?.maxAdvanceDays ?? defaultSettings.maxAdvanceDays,
             reminder24h:
               business.settings?.reminder24h ?? defaultSettings.reminder24h,
+            timezone: business.settings?.timezone ?? defaultSettings.timezone,
             websiteUrl: business.settings?.websiteUrl ?? null,
             notifyPhone: business.settings?.notifyPhone ?? null,
             teamMembers: business.employees.map((employee) => ({

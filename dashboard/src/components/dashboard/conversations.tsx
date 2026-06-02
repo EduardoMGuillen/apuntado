@@ -55,6 +55,9 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [sendError, setSendError] = useState("");
   const [visibleMessages, setVisibleMessages] = useState(MESSAGES_PAGE_SIZE);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const isAtBottomRef = useRef(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +83,9 @@ export function ConversationsClient({ business, customers: initial }: Props) {
       const msgPhone = normalizeWhatsAppPhone(msg.customerPhone);
       if (selected && msgPhone === normalizeWhatsAppPhone(selected)) {
         setMessages((prev) => [...prev, msg]);
+        if (!isAtBottomRef.current) {
+          setUnreadCount((prev) => prev + 1);
+        }
       }
       setCustomers((prev) =>
         prev.map((c) =>
@@ -110,12 +116,32 @@ export function ConversationsClient({ business, customers: initial }: Props) {
     }
   }, [messages]);
 
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const onScroll = () => {
+      const nearBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight < 80;
+      setIsAtBottom(nearBottom);
+      isAtBottomRef.current = nearBottom;
+      if (nearBottom) setUnreadCount(0);
+    };
+    container.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [selected, messages.length]);
+
   const startIndex = Math.max(0, messages.length - visibleMessages);
   const visibleSlice = messages.slice(startIndex);
   const hasOlderMessages = startIndex > 0;
 
   function loadOlderMessages() {
     setVisibleMessages((prev) => Math.min(messages.length, prev + MESSAGES_PAGE_SIZE));
+  }
+
+  function jumpToBottom() {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    setUnreadCount(0);
   }
 
   async function toggleTakeover(takeover: boolean) {
@@ -335,7 +361,7 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                   </div>
                 </div>
 
-                <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3 md:p-4">
+                <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto p-3 space-y-3 md:p-4">
                   {hasOlderMessages && (
                     <div className="sticky top-0 z-10 flex justify-center pb-2">
                       <Button
@@ -370,6 +396,19 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                       </p>
                     </div>
                   ))}
+                  {!isAtBottom && (
+                    <div className="sticky bottom-2 z-10 mt-2 flex justify-center">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={jumpToBottom}
+                        className="shadow-md"
+                      >
+                        Ir al final
+                        {unreadCount > 0 ? ` (${unreadCount} nuevo${unreadCount > 1 ? "s" : ""})` : ""}
+                      </Button>
+                    </div>
+                  )}
                   <div ref={bottomRef} />
                 </div>
 

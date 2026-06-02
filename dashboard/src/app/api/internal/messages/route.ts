@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withVpsAuth } from "@/lib/internal-api";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
+import { sendPushToBusinessOwner } from "@/lib/push";
 
 export const POST = withVpsAuth(async (req: NextRequest) => {
   const body = await req.json();
@@ -32,6 +33,16 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
   const message = await prisma.whatsappMessage.create({
     data: { businessId, customerPhone: phone, body: messageBody, fromClient },
   });
+
+  if (fromClient) {
+    const preview = String(messageBody).slice(0, 120);
+    await sendPushToBusinessOwner(businessId, {
+      title: "Nuevo mensaje de WhatsApp",
+      body: `${phone}: ${preview}`,
+      url: `/app/${businessId}/conversaciones`,
+      tag: `msg-${businessId}-${phone}`,
+    });
+  }
 
   return NextResponse.json(message);
 });

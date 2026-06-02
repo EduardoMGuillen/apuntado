@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { CA_PHONE_PLACEHOLDER } from "@/lib/region";
+import { BUSINESS_TIMEZONES } from "@/lib/timezones";
 
 type TeamMember = {
   id?: string;
@@ -24,6 +25,7 @@ interface Settings {
   minAdvanceMinutes: number;
   maxAdvanceDays: number;
   reminder24h: boolean;
+  timezone: string;
   websiteUrl: string | null;
   notifyPhone: string | null;
   teamMembers: TeamMember[];
@@ -208,6 +210,30 @@ export function SettingsForm({
               }
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="timezone">Zona horaria del negocio</Label>
+          <select
+            id="timezone"
+            value={settings.timezone}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                timezone: e.target.value,
+              })
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+          >
+            {BUSINESS_TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Se usa para disponibilidad, recordatorios y validación de fechas.
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import { fetchWebsiteContent } from "@/lib/website-fetch";
 import { getSubscriptionAccess } from "@/lib/subscription";
 import { reconcileCustomerPhone } from "@/lib/customer-phone";
 import { addDays, startOfDay } from "date-fns";
+import { resolveBusinessTimezone } from "@/lib/timezones";
 
 export async function GET(
   req: NextRequest,
@@ -59,12 +60,29 @@ export async function GET(
     select: { scheduledAt: true, endsAt: true },
   });
 
-  const availability = buildAvailabilityText(business.schedules, appointments);
+  const timezone = resolveBusinessTimezone(business.settings?.timezone);
+  const availability = buildAvailabilityText(
+    business.schedules,
+    appointments,
+    timezone
+  );
   const websiteContent = await fetchWebsiteContent(business.settings?.websiteUrl);
   const systemPrompt = buildSystemPrompt(
     { ...business, websiteContent },
-    availability
+    availability,
+    timezone
   );
+  const customerContext = customer
+    ? [
+        "DATOS DEL CLIENTE ACTUAL:",
+        `- Nombre: ${customer.name?.trim() || "no registrado"}`,
+        `- Tipo: ${customer.clientType?.trim() || "no registrado"}`,
+        "- Si un dato ya existe, no lo vuelvas a preguntar.",
+      ].join("\n")
+    : "";
+  const enrichedPrompt = customerContext
+    ? `${systemPrompt}\n\n${customerContext}`
+    : systemPrompt;
   const subscriptionAccess = getSubscriptionAccess(business.subscription);
 
   return NextResponse.json({
@@ -76,7 +94,8 @@ export async function GET(
     manualTakeover: customer?.manualTakeover ?? false,
     takenOverAt: customer?.takenOverAt?.toISOString() ?? null,
     subscriptionActive: subscriptionAccess.active,
-    systemPrompt,
+    systemPrompt: enrichedPrompt,
     availability,
+    timezone,
   });
 }
