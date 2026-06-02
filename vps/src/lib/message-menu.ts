@@ -1,4 +1,5 @@
 import type { WASocket } from "@whiskeysockets/baileys";
+import { sendTextMessage } from "./send-message.js";
 
 export interface ReplyMenu {
   prompt?: string;
@@ -87,6 +88,6 @@ export async function sendReplyWithMenu(
   } else {
     text = body;
   }
-  await sock.sendMessage(jid, { text });
+  await sendTextMessage(sock, jid, text);
   return text;
 }

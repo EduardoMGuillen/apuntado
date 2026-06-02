@@ -1,4 +1,12 @@
-import { isJidGroup, isLidUser, jidNormalizedUser } from "@whiskeysockets/baileys";
+import {
+  isJidBroadcast,
+  isJidBot,
+  isJidGroup,
+  isJidNewsletter,
+  isJidUser,
+  isLidUser,
+  jidNormalizedUser,
+} from "@whiskeysockets/baileys";
 import type { WAMessage } from "@whiskeysockets/baileys";
 import { normalizeWhatsAppPhone } from "./phone.js";
 
@@ -15,6 +23,13 @@ export function extractCustomerIdentityFromMessage(
   const key = msg.key;
   const remoteJid = key?.remoteJid;
   if (!remoteJid || isJidGroup(remoteJid)) return null;
+
+  // Estados (status@broadcast), listas de difusión, canales — no son chats 1:1.
+  if (isJidBroadcast(remoteJid) || isJidNewsletter(remoteJid) || isJidBot(remoteJid)) {
+    return null;
+  }
+
+  if (!isJidUser(remoteJid) && !isLidUser(remoteJid)) return null;
 
   let customerPhone: string | null = null;
 

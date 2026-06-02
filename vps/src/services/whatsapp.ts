@@ -14,6 +14,7 @@ import {
   isWhatsAppPlaceholderText,
 } from "../lib/message-body.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
+import { sendTextMessage } from "../lib/send-message.js";
 import { enqueueIncomingMessage } from "./message-buffer.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
@@ -162,6 +163,7 @@ export async function startSession(
     printQRInTerminal: false,
     version,
     browser: Browsers.macOS("Chrome"),
+    markOnlineOnConnect: true,
     connectTimeoutMs: 60_000,
     defaultQueryTimeoutMs: 60_000,
     keepAliveIntervalMs: 25_000,
@@ -271,7 +273,7 @@ export async function startSession(
             const fallbackText =
               "No pude leer tu último mensaje completo. ¿Me lo podés reenviar en texto, por favor? 🙏";
             try {
-              await sock.sendMessage(identity.replyJid, { text: fallbackText });
+              await sendTextMessage(sock, identity.replyJid, fallbackText);
               await saveOutgoingMessage(
                 businessId,
                 identity.customerPhone,
@@ -345,7 +347,7 @@ export async function sendMessage(
   }
 
   const jid = resolveReplyJid(customerPhone, replyJid);
-  await session.sock.sendMessage(jid, { text: body });
+  await sendTextMessage(session.sock, jid, body);
   await saveOutgoingMessage(businessId, customerPhone, body, jid);
 }
 

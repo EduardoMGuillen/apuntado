@@ -11,6 +11,7 @@ import {
 } from "./db.js";
 import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
 import { stripEscalationKeyword } from "../lib/escalation.js";
+import { sendTextMessage } from "../lib/send-message.js";
 
 const DEFAULT_ESCALATION_REPLY =
   "Gracias por escribir. Un agente de nuestro equipo se conectará contigo lo antes posible. 🙏";
@@ -371,7 +372,7 @@ export async function processBotReply(
 
           for (const phone of escalation.notifyPhones) {
             const teamJid = phone.replace("+", "") + "@s.whatsapp.net";
-            await sock.sendMessage(teamJid, { text: escalation.alertMessage });
+            await sendTextMessage(sock, teamJid, escalation.alertMessage);
           }
 
           io.to(`business:${businessId}`).emit("takeover:waiting", {
