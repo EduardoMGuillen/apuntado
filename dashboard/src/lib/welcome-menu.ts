@@ -1,4 +1,8 @@
 import type { BookingMode } from "@/lib/booking-modes";
+import {
+  type ConversationTone,
+  usesFormalRegister,
+} from "@/lib/conversation-tones";
 
 export const WELCOME_MENU_MAX_OPTIONS = 6;
 export const WELCOME_MENU_MIN_OPTIONS = 2;
@@ -60,7 +64,8 @@ export function resolveWelcomeMenu(
 export function buildWelcomeMenuPromptSection(
   bookingMode: BookingMode,
   greeting: string | null | undefined,
-  optionsRaw: string | null | undefined
+  optionsRaw: string | null | undefined,
+  tone: ConversationTone = "formal"
 ): string {
   const { greeting: text, options } = resolveWelcomeMenu(
     bookingMode,
@@ -71,6 +76,16 @@ export function buildWelcomeMenuPromptSection(
   const numbered = options
     .map((option, index) => `${index + 1}. ${option}`)
     .join("\n");
+
+  if (usesFormalRegister(tone)) {
+    return `MENÚ DE BIENVENIDA (saludo inicial o cuando el cliente escribe hola/buenos días sin pedido claro):
+- NO escriba la lista numerada en el texto del mensaje; el sistema la arma automáticamente.
+- Responda SOLO con una línea MENU (invisible para el cliente) usando exactamente estas opciones:
+  MENU:{"prompt":${JSON.stringify(text)},"options":[${options.map((o) => JSON.stringify(o)).join(",")}]}
+- Opciones de referencia (mismo sentido, no las copie numeradas en el cuerpo):
+${numbered}
+- Si el cliente elige una opción por número o texto, atienda según esa intención (agente → ESCALAR_AGENTE si aplica).`;
+  }
 
   return `MENÚ DE BIENVENIDA (saludo inicial o cuando el cliente escribe hola/buenas sin pedido claro):
 - NO escribas la lista numerada en el texto del mensaje; el sistema la arma automáticamente.

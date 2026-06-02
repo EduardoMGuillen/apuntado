@@ -89,14 +89,14 @@ export default async function ConfigPage({
         />
 
         <p className="text-sm text-muted-foreground">
-          Para editar horarios, modo del bot o menú de bienvenida, andá a{" "}
+          El tono del bot (formal, casual, etc.) está en{" "}
           <Link
             href={`/app/${business.id}/personalizacion`}
             className="font-medium text-primary underline"
           >
             Personalización
           </Link>
-          . Las reglas del bot están en{" "}
+          , sección «Tono de conversación». Horarios y menú de bienvenida también ahí. Las reglas del bot están en{" "}
           <Link
             href={`/app/${business.id}/reglas`}
             className="font-medium text-primary underline"

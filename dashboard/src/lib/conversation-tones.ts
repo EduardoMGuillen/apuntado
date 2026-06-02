@@ -8,7 +8,7 @@ export const CONVERSATION_TONE_VALUES = [
 
 export type ConversationTone = (typeof CONVERSATION_TONE_VALUES)[number];
 
-export const DEFAULT_CONVERSATION_TONE: ConversationTone = "casual_hn";
+export const DEFAULT_CONVERSATION_TONE: ConversationTone = "formal";
 
 export const CONVERSATION_TONES: {
   id: ConversationTone;
@@ -16,43 +16,57 @@ export const CONVERSATION_TONES: {
   description: string;
 }[] = [
   {
+    id: "formal",
+    label: "Formal y profesional",
+    description:
+      "Usted, claro y corporativo. Recomendado para clínicas, bufetes y marcas serias.",
+  },
+  {
     id: "casual_hn",
     label: "Casual centroamericano",
     description:
-      'Natural y cercano, con "vos" o "tú" según suene bien. Ideal para la mayoría de negocios.',
-  },
-  {
-    id: "formal",
-    label: "Formal",
-    description: "Usted, respetuoso y profesional. Clínicas, bufetes, servicios premium.",
+      'Cercano con "vos" o "tú". Ideal para negocios locales informales.',
   },
   {
     id: "warm",
     label: "Cálido y cercano",
-    description: "Amable y empático, sin tanta jerga local. Bueno para salud y bienestar.",
+    description: "Amable y empático, sin tanta jerga local.",
   },
   {
     id: "brief",
     label: "Directo y breve",
-    description: "Respuestas cortas, al grano. Ideal cuando hay mucho volumen de chats.",
+    description: "Respuestas cortas y profesionales.",
   },
   {
     id: "enthusiastic",
     label: "Entusiasta",
-    description: "Energía positiva y motivadora. Restaurantes, retail, promociones.",
+    description: "Energía positiva; emojis con moderación.",
   },
 ];
+
+export function normalizeConversationTone(
+  raw: string | null | undefined
+): string | null {
+  if (!raw?.trim()) return null;
+  return raw.trim().toLowerCase();
+}
 
 export function parseConversationTone(
   raw: string | null | undefined
 ): ConversationTone {
+  const normalized = normalizeConversationTone(raw);
   if (
-    raw &&
-    CONVERSATION_TONE_VALUES.includes(raw as ConversationTone)
+    normalized &&
+    CONVERSATION_TONE_VALUES.includes(normalized as ConversationTone)
   ) {
-    return raw as ConversationTone;
+    return normalized as ConversationTone;
   }
   return DEFAULT_CONVERSATION_TONE;
+}
+
+/** Tono con registro de usted (sin voseo). */
+export function usesFormalRegister(tone: ConversationTone): boolean {
+  return tone === "formal" || tone === "brief";
 }
 
 export function buildConversationTonePromptSection(
@@ -61,26 +75,25 @@ export function buildConversationTonePromptSection(
   const config = CONVERSATION_TONES.find((t) => t.id === tone)!;
 
   const instructions: Record<ConversationTone, string> = {
+    formal: `TONO DE CONVERSACIÓN — ${config.label} (PRIORIDAD MÁXIMA):
+- Trate SIEMPRE al cliente de "usted". Conjugación formal: puede, confirme, indique, le ayudo, está disponible.
+- PROHIBIDO: vos, tú, podés, saludá, decile, agregá, cheque, dale, puras, pa', y jerga local.
+- Lenguaje neutro en español internacional; sin regionalismos hondureños ni centroamericanos.
+- Profesional, cortés y claro. Esta regla anula cualquier ejemplo en voseo más abajo.`,
     casual_hn: `TONO DE CONVERSACIÓN — ${config.label}:
 - Español centroamericano casual: cercano, claro y humano (podés usar "vos" o "tú").
 - Expresiones locales con moderación ("cheque", "dale", "puras", "pa'" cuando encaje).
 - Evitá sonar robótico o demasiado formal.`,
-    formal: `TONO DE CONVERSACIÓN — ${config.label}:
-- Tratá al cliente de "usted"; sin jerga local ni diminutivos excesivos.
-- Frases claras, corteses y profesionales.
-- Mantené calidez sin informalidad.`,
     warm: `TONO DE CONVERSACIÓN — ${config.label}:
-- Amable, empático y paciente; podés usar "vos" con moderación.
+- Amable, empático y paciente; preferí "usted" salvo que el cliente use "tú" primero.
 - Validá lo que el cliente dice antes de responder (ej. "Entiendo", "Con gusto").
 - Evitá respuestas secas o demasiado frías.`,
     brief: `TONO DE CONVERSACIÓN — ${config.label}:
-- Mensajes cortos (1–3 oraciones cuando sea posible).
-- Sin rodeos ni repetir lo que el cliente ya dijo.
-- Seguí siendo amable; no suenes brusco.`,
+- Mensajes cortos (1–3 oraciones). Trate de "usted".
+- Sin rodeos ni jerga local. Mantenga cortesía profesional.`,
     enthusiastic: `TONO DE CONVERSACIÓN — ${config.label}:
-- Energía positiva; podés usar emojis con moderación (1 por mensaje como máximo).
-- Entusiasmo genuino por ayudar y por el negocio.
-- Evitá exagerar o parecer vendedor agresivo.`,
+- Energía positiva; emojis con moderación (máximo 1 por mensaje).
+- Puede usar "usted" o "tú" según suene natural, sin jerga local fuerte.`,
   };
 
   return instructions[tone];
