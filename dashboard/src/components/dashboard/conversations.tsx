@@ -42,6 +42,7 @@ interface Props {
 }
 
 const TZ = "America/Tegucigalpa";
+const MESSAGES_PAGE_SIZE = 30;
 
 export function ConversationsClient({ business, customers: initial }: Props) {
   const [customers, setCustomers] = useState(initial);
@@ -53,7 +54,9 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [visibleMessages, setVisibleMessages] = useState(MESSAGES_PAGE_SIZE);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const selectedCustomer = customers.find((c) => c.whatsappPhone === selected);
 
@@ -61,7 +64,10 @@ export function ConversationsClient({ business, customers: initial }: Props) {
     if (!selected) return;
     fetch(`/api/business/${business.id}/messages?phone=${encodeURIComponent(selected)}`)
       .then((r) => r.json())
-      .then(setMessages);
+      .then((data: Message[]) => {
+        setMessages(data);
+        setVisibleMessages(MESSAGES_PAGE_SIZE);
+      });
   }, [selected, business.id]);
 
   useEffect(() => {
@@ -95,8 +101,22 @@ export function ConversationsClient({ business, customers: initial }: Props) {
   }, [business.id, selected]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollRef.current;
+    if (!container) return;
+    const nearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+    if (nearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  const startIndex = Math.max(0, messages.length - visibleMessages);
+  const visibleSlice = messages.slice(startIndex);
+  const hasOlderMessages = startIndex > 0;
+
+  function loadOlderMessages() {
+    setVisibleMessages((prev) => Math.min(messages.length, prev + MESSAGES_PAGE_SIZE));
+  }
 
   async function toggleTakeover(takeover: boolean) {
     if (!selected) return;
@@ -315,10 +335,23 @@ export function ConversationsClient({ business, customers: initial }: Props) {
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3 md:p-4">
-                  {messages.map((m, i) => (
+                <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto p-3 space-y-3 md:p-4">
+                  {hasOlderMessages && (
+                    <div className="sticky top-0 z-10 flex justify-center pb-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={loadOlderMessages}
+                        className="bg-background/90 backdrop-blur"
+                      >
+                        Ver mensajes anteriores
+                      </Button>
+                    </div>
+                  )}
+                  {visibleSlice.map((m, i) => (
                     <div
-                      key={i}
+                      key={`${m.createdAt}-${i}`}
                       className={cn(
                         "max-w-[75%] rounded-lg px-3 py-2 text-sm",
                         m.fromClient
