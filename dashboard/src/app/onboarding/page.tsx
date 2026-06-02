@@ -42,6 +42,25 @@ type Offering = {
   priceHNL?: number;
 };
 
+type PlanId = "basic" | "pro";
+
+const ONBOARDING_PLANS: Record<
+  PlanId,
+  { name: string; price: string; blurb: string; featured?: boolean }
+> = {
+  basic: {
+    name: "Básico",
+    price: "$20/mes",
+    blurb: "Ideal para comenzar con un empleado",
+  },
+  pro: {
+    name: "Pro",
+    price: "$35/mes",
+    blurb: "Más volumen, equipo y prioridad",
+    featured: true,
+  },
+};
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -55,6 +74,7 @@ export default function OnboardingPage() {
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("basic");
 
   const [itemName, setItemName] = useState("");
   const [itemDuration, setItemDuration] = useState(30);
@@ -150,7 +170,7 @@ export default function OnboardingPage() {
     const checkoutRes = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessId: id, plan: "basic", trial: true }),
+      body: JSON.stringify({ businessId: id, plan: selectedPlan, trial: true }),
     });
 
     const checkoutData = await checkoutRes.json();
@@ -549,6 +569,53 @@ export default function OnboardingPage() {
                       ))}
                     </ul>
                   )}
+                </div>
+
+                <div className="border-t border-border/60 pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Plan elegido
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {(["basic", "pro"] as PlanId[]).map((plan) => {
+                      const planInfo = ONBOARDING_PLANS[plan];
+                      const active = selectedPlan === plan;
+                      return (
+                        <button
+                          key={plan}
+                          type="button"
+                          onClick={() => setSelectedPlan(plan)}
+                          className={cn(
+                            "rounded-xl border p-3 text-left transition-all",
+                            active
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                              : "border-border/80 bg-background hover:border-primary/30"
+                          )}
+                        >
+                          <p className="text-sm font-semibold">
+                            {planInfo.name} · {planInfo.price}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {planInfo.blurb}
+                          </p>
+                          {planInfo.featured && (
+                            <span className="mt-2 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent-foreground">
+                              Recomendado
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-accent/40 bg-accent/10 p-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    🎉 Probá 14 días gratis
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Empezás hoy sin cobro. El primer pago se realiza al finalizar
+                    el período de prueba.
+                  </p>
                 </div>
 
                 <div className="border-t border-border/60 pt-4">
