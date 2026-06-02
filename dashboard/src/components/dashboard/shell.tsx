@@ -205,7 +205,10 @@ export function DashboardShell({
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="flex min-h-dvh-screen flex-col bg-muted/30 md:flex-row">
+    <div
+      data-dashboard-shell
+      className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-muted/30 md:h-auto md:min-h-dvh-screen md:max-h-none md:overflow-visible md:flex-row"
+    >
       {/* Escritorio: barra lateral */}
       <aside className="hidden w-[17rem] shrink-0 flex-col border-r border-white/5 bg-brand-dark md:flex">
         <div className="flex h-16 items-center border-b border-white/10 px-5">
@@ -249,9 +252,9 @@ export function DashboardShell({
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Móvil / PWA: cabecera */}
-        <header className="sticky top-0 z-40 shrink-0 border-b border-border/80 bg-background/95 pt-safe backdrop-blur-md md:hidden">
+        <header className="z-40 shrink-0 border-b border-border/80 bg-background pt-safe md:hidden">
           <div className="flex h-14 items-center gap-3 px-3 px-safe">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger
@@ -336,15 +339,15 @@ export function DashboardShell({
           </div>
         </header>
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-auto mesh-light">
-          <div className="container mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-4 py-4 pb-mobile-nav md:px-6 md:py-6 md:pb-6 lg:px-8 lg:py-8">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain mesh-light [-webkit-overflow-scrolling:touch]">
+          <div className="container mx-auto flex w-full max-w-6xl min-h-0 flex-1 flex-col px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
             {children}
           </div>
         </main>
 
-        {/* Móvil / PWA: accesos rápidos */}
+        {/* Móvil / PWA: barra inferior (flex, no fixed — evita saltos al scroll en iOS) */}
         <nav
-          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 pb-safe backdrop-blur-md md:hidden"
+          className="z-40 shrink-0 border-t border-border bg-background pb-safe md:hidden"
           aria-label="Navegación principal"
         >
           <div className="grid h-14 grid-cols-4 px-safe">
