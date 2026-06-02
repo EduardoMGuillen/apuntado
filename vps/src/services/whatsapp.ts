@@ -20,6 +20,7 @@ import {
   dropSessionMessageStore,
   getSessionMessageStore,
 } from "../lib/message-store.js";
+import { cleanEncryptionSessionFiles } from "../lib/signal-session-clean.js";
 import { enqueueIncomingMessage } from "./message-buffer.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
@@ -160,6 +161,25 @@ export async function startSession(
 
   ensureAuthDir();
   const authPath = path.join(AUTH_DIR, businessId);
+
+  const versionMarker = path.join(authPath, ".baileys-version");
+  if (hasPersistedAuth(businessId)) {
+    try {
+      const prev = fs.existsSync(versionMarker)
+        ? fs.readFileSync(versionMarker, "utf8").trim()
+        : "";
+      if (prev !== "7") {
+        const removed = cleanEncryptionSessionFiles(authPath);
+        fs.writeFileSync(versionMarker, "7");
+        console.log(
+          `[WhatsApp] Migración Baileys 7: ${removed} archivo(s) E2E limpiados (${businessId})`
+        );
+      }
+    } catch (err) {
+      console.warn(`[WhatsApp] No se pudo migrar claves E2E (${businessId}):`, err);
+    }
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(authPath);
   const version = await resolveWaVersion();
 

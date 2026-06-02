@@ -1,6 +1,7 @@
 import {
-  isJidUser,
   isLidUser,
+  isPnUser,
+  jidNormalizedUser,
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { resolveReplyJid } from "./reply-jid.js";
@@ -9,54 +10,31 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Resuelve JID válido en WhatsApp (evita @lid cuando hay teléfono real). */
+/** Resuelve JID de envío (Baileys 7 mapea LID/PN internamente). */
 export async function resolveOutgoingJid(
   sock: WASocket,
   jid: string,
   customerPhone?: string
 ): Promise<string> {
-  const preferred = customerPhone
-    ? resolveReplyJid(customerPhone, jid)
-    : jid;
-
-  if (!isLidUser(preferred)) {
-    try {
-      const results = await sock.onWhatsApp(preferred);
-      const result = results?.[0];
-      if (result?.exists && result.jid && isJidUser(result.jid)) {
-        return result.jid;
-      }
-    } catch (err) {
-      console.warn("[WhatsApp] onWhatsApp falló para", preferred, err);
-    }
-    return preferred;
-  }
-
-  if (customerPhone && !customerPhone.startsWith("lid:")) {
-    const phoneJid = resolveReplyJid(customerPhone, null);
-    console.warn(
-      "[WhatsApp] Reemplazando @lid por JID de teléfono:",
-      jid,
-      "→",
-      phoneJid
-    );
-    return phoneJid;
-  }
+  const preferred = jidNormalizedUser(
+    customerPhone ? resolveReplyJid(customerPhone, jid) : jid
+  ) || jid;
 
   try {
-    const results = await sock.onWhatsApp(jid);
+    const results = await sock.onWhatsApp(preferred);
     const result = results?.[0];
-    if (result?.jid && isJidUser(result.jid)) return result.jid;
+    if (result?.exists && result.jid) {
+      return jidNormalizedUser(result.jid) || result.jid;
+    }
   } catch (err) {
-    console.warn("[WhatsApp] onWhatsApp falló para LID", jid, err);
+    console.warn("[WhatsApp] onWhatsApp falló para", preferred, err);
   }
 
-  return jid;
+  return preferred;
 }
 
 /**
- * Envía texto con pasos que ayudan a evitar "Waiting for this message"
- * (sesión E2E aún no lista en el dispositivo del destinatario).
+ * Envía texto; usa assertSessions y el JID del hilo (incl. @lid) para E2E en iOS.
  */
 export async function sendTextMessage(
   sock: WASocket,
@@ -66,12 +44,17 @@ export async function sendTextMessage(
 ): Promise<string> {
   const target = await resolveOutgoingJid(sock, jid, customerPhone);
 
-  if (isLidUser(target) && !customerPhone?.startsWith("lid:")) {
-    console.error(
-      "[WhatsApp] No se envía a @lid sin teléfono real — mensaje omitido:",
-      target
-    );
-    throw new Error("No se pudo resolver JID de teléfono para enviar el mensaje");
+  console.log("[WhatsApp] Enviando mensaje", {
+    target,
+    lid: isLidUser(target),
+    pn: isPnUser(target),
+    customerPhone: customerPhone ?? null,
+  });
+
+  try {
+    await sock.assertSessions([target], true);
+  } catch (err) {
+    console.warn("[WhatsApp] assertSessions:", err);
   }
 
   try {
@@ -81,14 +64,19 @@ export async function sendTextMessage(
     /* no bloquear envío si presence falla */
   }
 
-  await sleep(400);
+  await sleep(500);
 
   try {
     await sock.sendMessage(target, { text });
     return text;
   } catch (firstErr) {
     console.warn("[WhatsApp] Reintento de envío tras fallo E2E:", firstErr);
-    await sleep(1200);
+    await sleep(1500);
+    try {
+      await sock.assertSessions([target], true);
+    } catch {
+      /* ignore */
+    }
     const retriedJid = await resolveOutgoingJid(sock, target, customerPhone);
     await sock.sendMessage(retriedJid, { text });
     return text;
