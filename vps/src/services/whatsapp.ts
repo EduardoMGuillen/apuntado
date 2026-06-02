@@ -9,7 +9,10 @@ import { Boom } from "@hapi/boom";
 import qrcode from "qrcode-terminal";
 import type { Server } from "socket.io";
 import { extractCustomerIdentityFromMessage } from "../lib/message-phone.js";
-import { getIncomingMessageText } from "../lib/message-body.js";
+import {
+  getIncomingMessageText,
+  isWhatsAppPlaceholderText,
+} from "../lib/message-body.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
 import { enqueueIncomingMessage } from "./message-buffer.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
@@ -29,6 +32,8 @@ const sessions = new Map<string, SessionState>();
 const AUTH_DIR =
   process.env.AUTH_SESSIONS_DIR ||
   path.join(process.cwd(), "auth_sessions");
+const PLACEHOLDER_NOTICE_COOLDOWN_MS = 60_000;
+const placeholderNoticeAt = new Map<string, number>();
 
 /** WhatsApp rechaza conexiones con versión de protocolo vieja (error 405). */
 const FALLBACK_WA_VERSION: [number, number, number] = [2, 3000, 1034074495];
@@ -253,6 +258,43 @@ export async function startSession(
 
       const body = getIncomingMessageText(msg).trim();
       if (!body) {
+        const rawConversation = msg.message?.conversation ?? "";
+        const rawExtended = msg.message?.extendedTextMessage?.text ?? "";
+        const maybePlaceholder = isWhatsAppPlaceholderText(rawConversation)
+          || isWhatsAppPlaceholderText(rawExtended);
+
+        if (maybePlaceholder) {
+          const dedupeKey = `${businessId}:${identity.customerPhone}`;
+          const now = Date.now();
+          const lastNotice = placeholderNoticeAt.get(dedupeKey) ?? 0;
+          if (now - lastNotice >= PLACEHOLDER_NOTICE_COOLDOWN_MS) {
+            const fallbackText =
+              "No pude leer tu último mensaje completo. ¿Me lo podés reenviar en texto, por favor? 🙏";
+            try {
+              await sock.sendMessage(identity.replyJid, { text: fallbackText });
+              await saveOutgoingMessage(
+                businessId,
+                identity.customerPhone,
+                fallbackText,
+                identity.replyJid
+              );
+              placeholderNoticeAt.set(dedupeKey, now);
+              io.to(`business:${businessId}`).emit("message:new", {
+                businessId,
+                customerPhone: identity.customerPhone,
+                body: fallbackText,
+                fromClient: false,
+                createdAt: new Date().toISOString(),
+              });
+            } catch (err) {
+              console.error(
+                `[WhatsApp] Error enviando fallback por placeholder (${identity.customerPhone}):`,
+                err
+              );
+            }
+          }
+        }
+
         console.log(
           `[WhatsApp] Mensaje sin texto (${identity.customerPhone}) — tipo multimedia u omitido`
         );

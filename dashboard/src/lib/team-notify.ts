@@ -51,10 +51,19 @@ export function buildTeamAlertMessage({
   customerMessage: string;
   reason?: string;
 }): string {
+  const rawMessage = customerMessage.trim();
+  const isInvalidSnippet =
+    !rawMessage ||
+    /waiting for message/i.test(rawMessage) ||
+    /this may take a while/i.test(rawMessage) ||
+    /esperando este mensaje/i.test(rawMessage);
+  const normalizedMessage = isInvalidSnippet
+    ? "Cliente solicitó hablar con un agente (mensaje no legible)."
+    : rawMessage;
   const snippet =
-    customerMessage.length > 120
-      ? `${customerMessage.slice(0, 117)}...`
-      : customerMessage;
+    normalizedMessage.length > 120
+      ? `${normalizedMessage.slice(0, 117)}...`
+      : normalizedMessage;
 
   return [
     `🔔 *Cliente esperando respuesta* — ${businessName}`,

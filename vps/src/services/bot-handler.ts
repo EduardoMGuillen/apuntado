@@ -37,12 +37,57 @@ const TRIVIAL_REPLIES = [
   "¡Gracias a vos! Estamos pa' servirte.",
 ];
 
+const FALLBACK_CUSTOMER_REPLY =
+  "Gracias por escribir. Ya recibí tu mensaje, en breve te respondo con la información. 🙌";
+
+const INVALID_REPLY_PATTERNS = [
+  /waiting for message/i,
+  /this may take a while/i,
+  /^thinking\.\.\.?$/i,
+];
+const INVALID_ESCALATION_PATTERNS = [
+  /waiting for message/i,
+  /this may take a while/i,
+  /esperando este mensaje/i,
+];
+
 function randomTrivialReply(): string {
   return TRIVIAL_REPLIES[Math.floor(Math.random() * TRIVIAL_REPLIES.length)];
 }
 
 function isTrivialMessage(body: string): boolean {
   return TRIVIAL_PATTERNS.test(body.trim());
+}
+
+function sanitizeReply(reply: string): string {
+  const clean = reply.trim();
+  if (!clean) return FALLBACK_CUSTOMER_REPLY;
+  if (INVALID_REPLY_PATTERNS.some((pattern) => pattern.test(clean))) {
+    return FALLBACK_CUSTOMER_REPLY;
+  }
+  return clean;
+}
+
+function isInvalidEscalationMessage(text: string): boolean {
+  const clean = text.trim();
+  if (!clean) return true;
+  return INVALID_ESCALATION_PATTERNS.some((pattern) => pattern.test(clean));
+}
+
+function resolveEscalationCustomerMessage(
+  combinedBody: string,
+  history: { body: string; fromClient: boolean }[]
+): string {
+  if (!isInvalidEscalationMessage(combinedBody)) {
+    return combinedBody.trim();
+  }
+
+  const fallbackFromHistory = [...history]
+    .reverse()
+    .find((m) => m.fromClient && !isInvalidEscalationMessage(m.body))?.body;
+
+  if (fallbackFromHistory?.trim()) return fallbackFromHistory.trim();
+  return "El cliente solicitó hablar con un agente (sin texto legible).";
 }
 
 function stripConfirmationKeyword(response: string): {
@@ -317,7 +362,10 @@ export async function processBotReply(
           const escalation = await escalateToAgent({
             businessId,
             customerPhone,
-            customerMessage: combinedBody,
+            customerMessage: resolveEscalationCustomerMessage(
+              combinedBody,
+              history
+            ),
             reason,
           });
 
@@ -338,6 +386,7 @@ export async function processBotReply(
     }
   }
 
+  reply = sanitizeReply(reply);
   console.log(`[Bot] Respuesta enviada a ${customerPhone}`);
   await sendBotText(sockParams, reply, replyMenu);
 }
