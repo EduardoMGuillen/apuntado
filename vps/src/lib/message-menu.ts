@@ -1,4 +1,5 @@
 import type { WASocket } from "@whiskeysockets/baileys";
+import { resolveReplyJid } from "./reply-jid.js";
 import { sendTextMessage } from "./send-message.js";
 
 export interface ReplyMenu {
@@ -78,7 +79,8 @@ export async function sendReplyWithMenu(
   sock: WASocket,
   jid: string,
   body: string,
-  menu: ReplyMenu | undefined
+  menu: ReplyMenu | undefined,
+  customerPhone?: string
 ): Promise<string> {
   let text: string;
   if (menu?.options.length) {
@@ -88,6 +90,9 @@ export async function sendReplyWithMenu(
   } else {
     text = body;
   }
-  await sendTextMessage(sock, jid, text);
+  const targetJid = customerPhone
+    ? resolveReplyJid(customerPhone, jid)
+    : jid;
+  await sendTextMessage(sock, targetJid, text, customerPhone);
   return text;
 }

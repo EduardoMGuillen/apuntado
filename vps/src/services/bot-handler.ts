@@ -10,6 +10,7 @@ import {
   escalateToAgent,
 } from "./db.js";
 import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
+import { resolveReplyJid } from "../lib/reply-jid.js";
 import { stripEscalationKeyword } from "../lib/escalation.js";
 import { sendTextMessage } from "../lib/send-message.js";
 
@@ -195,17 +196,19 @@ async function sendBotText(
   reply: string,
   menu?: ReturnType<typeof parseReplyMenu>["menu"]
 ): Promise<void> {
+  const outboundJid = resolveReplyJid(params.customerPhone, params.replyJid);
   const sentText = await sendReplyWithMenu(
     params.sock,
-    params.replyJid,
+    outboundJid,
     reply,
-    menu
+    menu,
+    params.customerPhone
   );
   await saveOutgoingMessage(
     params.businessId,
     params.customerPhone,
     sentText,
-    params.replyJid
+    outboundJid
   );
 
   params.io.to(`business:${params.businessId}`).emit("message:new", {

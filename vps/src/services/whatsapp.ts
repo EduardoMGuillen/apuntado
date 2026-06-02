@@ -2,6 +2,7 @@ import makeWASocket, {
   Browsers,
   DisconnectReason,
   fetchLatestWaWebVersion,
+  makeCacheableSignalKeyStore,
   useMultiFileAuthState,
   type WASocket,
 } from "@whiskeysockets/baileys";
@@ -15,6 +16,10 @@ import {
 } from "../lib/message-body.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
 import { sendTextMessage } from "../lib/send-message.js";
+import {
+  dropSessionMessageStore,
+  getSessionMessageStore,
+} from "../lib/message-store.js";
 import { enqueueIncomingMessage } from "./message-buffer.js";
 import { saveOutgoingMessage, setSessionConnected } from "./db.js";
 import path from "path";
@@ -95,6 +100,7 @@ function teardownSession(businessId: string): void {
   if (!session) return;
 
   sessions.delete(businessId);
+  dropSessionMessageStore(businessId);
   try {
     session.sock.end(
       new Boom("session restart", { statusCode: DisconnectReason.loggedOut })
@@ -157,8 +163,13 @@ export async function startSession(
   const { state, saveCreds } = await useMultiFileAuthState(authPath);
   const version = await resolveWaVersion();
 
+  const messageStore = getSessionMessageStore(businessId);
+
   const sock = makeWASocket({
-    auth: state,
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, logger),
+    },
     logger,
     printQRInTerminal: false,
     version,
@@ -167,6 +178,7 @@ export async function startSession(
     connectTimeoutMs: 60_000,
     defaultQueryTimeoutMs: 60_000,
     keepAliveIntervalMs: 25_000,
+    getMessage: (key) => messageStore.get(key),
   });
 
   sessions.set(businessId, { sock, connected: false });
@@ -244,6 +256,12 @@ export async function startSession(
   });
 
   sock.ev.on("messages.upsert", async ({ messages, type }) => {
+    for (const msg of messages) {
+      if (msg.key.id && msg.message) {
+        messageStore.set(msg.key.id, msg.message);
+      }
+    }
+
     if (type !== "notify") return;
 
     for (const msg of messages) {
@@ -273,12 +291,21 @@ export async function startSession(
             const fallbackText =
               "No pude leer tu último mensaje completo. ¿Me lo podés reenviar en texto, por favor? 🙏";
             try {
-              await sendTextMessage(sock, identity.replyJid, fallbackText);
+              const outboundJid = resolveReplyJid(
+                identity.customerPhone,
+                identity.replyJid
+              );
+              await sendTextMessage(
+                sock,
+                outboundJid,
+                fallbackText,
+                identity.customerPhone
+              );
               await saveOutgoingMessage(
                 businessId,
                 identity.customerPhone,
                 fallbackText,
-                identity.replyJid
+                outboundJid
               );
               placeholderNoticeAt.set(dedupeKey, now);
               io.to(`business:${businessId}`).emit("message:new", {
@@ -347,7 +374,7 @@ export async function sendMessage(
   }
 
   const jid = resolveReplyJid(customerPhone, replyJid);
-  await sendTextMessage(session.sock, jid, body);
+  await sendTextMessage(session.sock, jid, body, customerPhone);
   await saveOutgoingMessage(businessId, customerPhone, body, jid);
 }
 

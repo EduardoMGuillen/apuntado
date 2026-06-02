@@ -59,5 +59,18 @@ export function extractCustomerIdentityFromMessage(
     return null;
   }
 
-  return { customerPhone, replyJid: remoteJid };
+  let replyJid = remoteJid;
+  const senderPn = key.senderPn;
+  if (senderPn && isJidUser(senderPn)) {
+    replyJid = jidNormalizedUser(senderPn) || senderPn;
+  } else if (isJidUser(remoteJid)) {
+    replyJid = jidNormalizedUser(remoteJid) || remoteJid;
+  }
+
+  if (isLidUser(replyJid) && !customerPhone.startsWith("lid:")) {
+    const digits = customerPhone.replace(/\D/g, "");
+    if (digits) replyJid = `${digits}@s.whatsapp.net`;
+  }
+
+  return { customerPhone, replyJid };
 }
