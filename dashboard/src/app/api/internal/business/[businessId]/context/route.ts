@@ -11,6 +11,8 @@ import {
   resolveCustomerForContext,
 } from "@/lib/customer-context";
 import { getMonthlyPlanUsage } from "@/lib/plan-usage";
+import { getMergedAvailabilityBusy } from "@/lib/google-calendar/availability";
+import { getCalendarConnection } from "@/lib/google-calendar/client";
 
 export async function GET(
   req: NextRequest,
@@ -46,22 +48,26 @@ export async function GET(
   const timezone = resolveBusinessTimezone(business.settings?.timezone);
   const { customer, appointments: customerAppointments } =
     await resolveCustomerForContext(businessId, phone, timezone);
-  const { start: rangeStart, end: rangeEnd } = getBusinessDayRangeUtc(
-    timezone,
-    3
-  );
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      businessId,
-      scheduledAt: { gte: rangeStart, lt: rangeEnd },
-      status: { in: ["pending", "confirmed"] },
-    },
-    select: { scheduledAt: true, endsAt: true },
-  });
+  const gcalConn = await getCalendarConnection(businessId);
+  const { start: rangeStart, end: rangeEnd } = getBusinessDayRangeUtc(timezone, 3);
+  const busySlots = gcalConn
+    ? await getMergedAvailabilityBusy(businessId, timezone, 3)
+    : (
+        await prisma.appointment.findMany({
+          where: {
+            businessId,
+            scheduledAt: { gte: rangeStart, lt: rangeEnd },
+            status: { in: ["pending", "confirmed"] },
+          },
+          select: { scheduledAt: true, endsAt: true },
+        })
+      ).map((r) => ({ scheduledAt: r.scheduledAt, endsAt: r.endsAt }));
+
   const availability = buildAvailabilityText(
     business.schedules,
-    appointments,
-    timezone
+    busySlots,
+    timezone,
+    { includesGoogleCalendar: !!gcalConn }
   );
   const websiteContent = await fetchWebsiteContent(business.settings?.websiteUrl);
   const systemPrompt = buildSystemPrompt(

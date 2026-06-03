@@ -4,6 +4,8 @@ import { getSession } from "@/lib/session";
 import { getBusinessForSession } from "@/lib/business-access";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { SettingsForm } from "@/components/dashboard/settings-form";
+import { GoogleCalendarCard } from "@/components/dashboard/google-calendar-card";
+import { canUseGoogleCalendar } from "@/lib/google-calendar/config";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -20,8 +22,10 @@ import { DEFAULT_TIMEZONE } from "@/lib/timezones";
 
 export default async function ConfigPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { googleCalendar?: string };
 }) {
   const session = await getSession();
   if (!session?.user?.id) redirect("/login");
@@ -30,6 +34,7 @@ export default async function ConfigPage({
     whatsappSession: true,
     subscription: true,
     settings: true,
+    googleCalendar: true,
     employees: {
       where: { isActive: true, whatsappPhone: { not: null } },
       orderBy: { name: "asc" },
@@ -66,6 +71,18 @@ export default async function ConfigPage({
             </Link>
           </div>
         )}
+
+        <GoogleCalendarCard
+          businessId={business.id}
+          featureAvailable={canUseGoogleCalendar(access)}
+          initialConnected={!!business.googleCalendar}
+          initialEmail={business.googleCalendar?.googleEmail ?? null}
+          initialCalendarId={business.googleCalendar?.calendarId ?? null}
+          initialCalendarSummary={
+            business.googleCalendar?.calendarSummary ?? null
+          }
+          urlHint={searchParams?.googleCalendar ?? null}
+        />
 
         <SettingsForm
           businessId={business.id}

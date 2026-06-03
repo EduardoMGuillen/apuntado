@@ -9,6 +9,13 @@ import { es } from "date-fns/locale";
 import { addMinutes } from "date-fns";
 import { resolveBusinessTimezone } from "@/lib/timezones";
 import { isScheduledAtInPast } from "@/lib/business-datetime";
+import { getCalendarConnection } from "@/lib/google-calendar/client";
+import { getMergedAvailabilityBusy } from "@/lib/google-calendar/availability";
+import { intervalsOverlap } from "@/lib/google-calendar/busy";
+import {
+  deleteGoogleEventForAppointment,
+  updateGoogleEventForAppointment,
+} from "@/lib/google-calendar/sync";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({
@@ -80,6 +87,7 @@ export async function PATCH(
         where: { id: appointment.id },
         data: { status: "cancelled" },
       });
+      deleteGoogleEventForAppointment(appointment.id).catch(console.error);
 
       const notice = [
         `Hola ${appointment.customer.name || ""}, tu cita en ${appointment.business.name} fue cancelada.`,
@@ -121,6 +129,27 @@ export async function PATCH(
 
     const newEndsAt = addMinutes(newStart, appointment.service.durationMin);
 
+    const gcalConn = await getCalendarConnection(params.id);
+    if (gcalConn) {
+      const busy = await getMergedAvailabilityBusy(params.id, timezone, 30);
+      const otherBusy = busy.filter(
+        (b) =>
+          !(
+            b.scheduledAt.getTime() === appointment.scheduledAt.getTime() &&
+            b.endsAt.getTime() === appointment.endsAt.getTime()
+          )
+      );
+      if (intervalsOverlap(newStart, newEndsAt, otherBusy)) {
+        return NextResponse.json(
+          {
+            error:
+              "Ese horario ya está ocupado (cita o bloqueo en Google Calendar).",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     await prisma.appointment.update({
       where: { id: appointment.id },
       data: { scheduledAt: newStart, endsAt: newEndsAt, status: "confirmed" },
@@ -146,6 +175,8 @@ export async function PATCH(
       customerReplyJid: appointment.customer.whatsappReplyJid,
       text: notice,
     });
+
+    updateGoogleEventForAppointment(appointment.id).catch(console.error);
 
     return NextResponse.json({
       ok: true,

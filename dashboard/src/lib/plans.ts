@@ -75,6 +75,7 @@ export const PLANS: Record<
       "Hasta 200 conversaciones nuevas/mes",
       "Hasta 1 200 respuestas con IA/mes",
       "Control manual cuando lo necesités",
+      "Google Calendar: sincronizar citas y bloquear horarios ocupados",
     ],
   },
   pro: {
@@ -89,6 +90,7 @@ export const PLANS: Record<
       "Múltiples empleados en alertas y equipo",
       "Recomendado si superás 200 chats o 1 200 respuestas IA/mes",
       "Soporte prioritario",
+      "Google Calendar (un calendario por negocio; compartilo con tu equipo en Google)",
     ],
   },
 };

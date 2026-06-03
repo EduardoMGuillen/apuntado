@@ -136,7 +136,8 @@ export function formatPriceHNL(amount: number | string): string {
 export function buildAvailabilityText(
   schedules: Schedule[],
   existingAppointments: { scheduledAt: Date; endsAt: Date }[],
-  timezone: string = DEFAULT_TZ
+  timezone: string = DEFAULT_TZ,
+  options?: { includesGoogleCalendar?: boolean }
 ): string {
   const zonedNow = toZonedTime(new Date(), timezone);
   const todayLocal = startOfDay(zonedNow);
@@ -158,7 +159,10 @@ export function buildAvailabilityText(
   }
 
   if (existingAppointments.length > 0) {
-    lines.push("\nCitas ya agendadas (próximos 3 días):");
+    const occupiedTitle = options?.includesGoogleCalendar
+      ? "\nHorarios ocupados (citas + Google Calendar, próximos 3 días):"
+      : "\nCitas ya agendadas (próximos 3 días):";
+    lines.push(occupiedTitle);
     const capped = existingAppointments.slice(0, 12);
     for (const apt of capped) {
       const time = formatInTimeZone(apt.scheduledAt, timezone, "EEE d/M HH:mm", { locale: es });

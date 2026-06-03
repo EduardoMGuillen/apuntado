@@ -11,6 +11,10 @@ import { DEFAULT_INQUIRY_SERVICE } from "@/lib/booking-modes";
 import { sendPushToBusinessOwner } from "@/lib/push";
 import { resolveBusinessTimezone } from "@/lib/timezones";
 import { isScheduledAtInPast } from "@/lib/business-datetime";
+import { getCalendarConnection } from "@/lib/google-calendar/client";
+import { getMergedAvailabilityBusy } from "@/lib/google-calendar/availability";
+import { intervalsOverlap } from "@/lib/google-calendar/busy";
+import { syncAppointmentToGoogle } from "@/lib/google-calendar/sync";
 
 const CLIENT_TYPES = new Set(["empresa", "particular"]);
 
@@ -124,6 +128,20 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
 
   const endsAt = addMinutes(start, service.durationMin);
 
+  const gcalConn = await getCalendarConnection(businessId);
+  if (gcalConn) {
+    const busy = await getMergedAvailabilityBusy(businessId, timezone, 30);
+    if (intervalsOverlap(start, endsAt, busy)) {
+      return NextResponse.json(
+        {
+          error:
+            "Ese horario ya está ocupado (cita existente o bloqueo en Google Calendar).",
+        },
+        { status: 409 }
+      );
+    }
+  }
+
   const appointment = await prisma.appointment.create({
     data: {
       businessId,
@@ -171,6 +189,8 @@ export const POST = withVpsAuth(async (req: NextRequest) => {
   console.log(
     `[Appointments] Cita creada ${appointment.id} — ${name} (${type}) — ${service.name} — ${fechaLabel}`
   );
+
+  syncAppointmentToGoogle(appointment.id).catch(console.error);
 
   return NextResponse.json(appointment);
 });

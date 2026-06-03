@@ -101,6 +101,7 @@ model Business {
   subscription Subscription?
   whatsappSession WhatsappSession?
   monthlyUsage BusinessMonthlyUsage[]
+  googleCalendar GoogleCalendarConnection?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }
@@ -181,12 +182,32 @@ model Appointment {
   status      String   @default("pending")
   reminderSent Boolean @default(false)
   reminder1hSent Boolean @default(false)
+  googleEventId String?
+  googleSyncError String?
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   service     Service  @relation(fields: [serviceId], references: [id])
   employee    Employee? @relation(fields: [employeeId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([businessId, googleEventId])
+}
+
+model GoogleCalendarConnection {
+  id                 String   @id @default(cuid())
+  businessId         String   @unique
+  googleEmail        String?
+  calendarId         String   @default("primary")
+  calendarSummary    String?
+  refreshTokenEnc    String   @db.Text
+  accessTokenEnc     String?  @db.Text
+  tokenExpiresAt     DateTime?
+  busyCacheJson      String?  @db.Text
+  busyCacheExpiresAt DateTime?
+  business           Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model WhatsappMessage {
