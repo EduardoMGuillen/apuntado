@@ -14,8 +14,8 @@ export function LandingCta() {
               Dejá de perder citas por WhatsApp
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg text-white/65">
-              Unite a los negocios en Centroamérica que ya automatizan sus reservas.
-              Configuración en menos de 10 minutos.
+              Desde ~L. 490/mes — menos que contratar a alguien medio tiempo para el
+              WhatsApp. En Honduras también podés pagar con transferencia Click.
             </p>
             <Link
               href="/register"

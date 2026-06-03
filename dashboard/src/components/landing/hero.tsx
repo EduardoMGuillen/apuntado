@@ -59,12 +59,12 @@ export function LandingHero() {
               <span className="text-gradient">en piloto automático</span>
             </h1>
             <p className="mx-auto mt-6 max-w-xl text-lg text-white/65 lg:mx-0 lg:text-xl">
-              Tus clientes escriben como siempre. Apuntado responde, consulta tu
-              agenda y confirma citas — sin apps, sin complicaciones. Tu número
-              sigue en tu celular.
+              Menos que media jornada de recepcionista o un CRM de WhatsApp con API
+              oficial. Tus clientes escriben como siempre; Apuntado agenda y confirma
+              citas — cuota fija, sin cargo Meta por mensaje.
             </p>
             <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70 lg:justify-start">
-              {["14 días gratis", "Sin spam masivo", "Español claro", "GT · SV · HN · NI · CR · PA"].map(
+              {["14 días gratis", "Todo incluido", "Pago Click en HN", "GT · SV · HN · NI · CR · PA"].map(
                 (item) => (
                   <li key={item} className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-accent" />

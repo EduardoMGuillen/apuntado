@@ -20,6 +20,9 @@ const DEFAULT_ESCALATION_REPLY =
 const SUBSCRIPTION_INACTIVE_MESSAGE =
   "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
 
+const CONVERSATION_LIMIT_MESSAGE =
+  "Hola. Este mes se alcanzó el límite de conversaciones del plan Básico (200 chats nuevos). El negocio le atenderá en cuanto pueda. Para más volumen, el plan Pro ofrece conversaciones ilimitadas — consulte al negocio o a soporte de Apuntado. 🙏";
+
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 
 function getAnthropicClient(): Anthropic | null {
@@ -288,6 +291,15 @@ export async function processBotReply(
       `[Bot] Suscripción inactiva (${context.name} / ${businessId}) — plan no permite bot`
     );
     await sendBotText(sockParams, SUBSCRIPTION_INACTIVE_MESSAGE);
+    return;
+  }
+
+  if (context.conversationLimitReached) {
+    const usage = context.conversationUsage;
+    console.warn(
+      `[Bot] Límite plan Básico (${businessId}) — ${usage?.used ?? "?"}/${usage?.limit ?? 200} en ${usage?.monthLabel ?? "mes"}`
+    );
+    await sendBotText(sockParams, CONVERSATION_LIMIT_MESSAGE);
     return;
   }
 

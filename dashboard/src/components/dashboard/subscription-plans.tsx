@@ -13,7 +13,14 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check } from "lucide-react";
-type PlanId = "basic" | "pro";
+import { PLANS, type PlanId } from "@/lib/plans";
+import {
+  MARKETING_TRANSPARENCY_NOTE,
+  formatPlanPriceHn,
+} from "@/lib/marketing-copy";
+import { HondurasPaymentOptions } from "@/components/billing/honduras-payment-options";
+import { ConversationUsageMeter } from "@/components/dashboard/conversation-usage-meter";
+import { PricingDisclaimers } from "@/components/marketing/pricing-disclaimers";
 
 type AccessInfo = {
   active: boolean;
@@ -24,44 +31,27 @@ type AccessInfo = {
   currentPeriodEnd: string | null;
 };
 
-const PLANS_UI: Record<
-  PlanId,
-  { name: string; price: string; description: string; features: string[] }
-> = {
-  basic: {
-    name: "Básico",
-    price: "$20",
-    description: "Para negocios pequeños",
-    features: [
-      "Bot WhatsApp 24/7",
-      "Agenda automática",
-      "Recordatorios 24h",
-      "Control manual",
-    ],
-  },
-  pro: {
-    name: "Pro",
-    price: "$35",
-    description: "Para más volumen",
-    features: [
-      "Todo lo del Básico",
-      "Múltiples empleados",
-      "Conversaciones ilimitadas",
-      "Soporte prioritario",
-    ],
-  },
-};
+interface UsageInfo {
+  used: number;
+  limit: number | null;
+  monthLabel: string;
+  applies: boolean;
+}
 
 interface Props {
   businessId: string;
+  businessName: string;
   access: AccessInfo;
+  usage: UsageInfo;
   hasStripeCustomer: boolean;
   stripeSimulate?: boolean;
 }
 
 export function SubscriptionPlans({
   businessId,
+  businessName,
   access,
+  usage,
   hasStripeCustomer,
   stripeSimulate = false,
 }: Props) {
@@ -116,6 +106,17 @@ export function SubscriptionPlans({
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">{MARKETING_TRANSPARENCY_NOTE}</p>
+
+      <ConversationUsageMeter
+        used={usage.used}
+        limit={usage.limit}
+        monthLabel={usage.monthLabel}
+        applies={usage.applies}
+        plan={access.plan}
+        businessId={businessId}
+      />
+
       {stripeSimulate && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
           <strong>Modo demo:</strong> Stripe no está configurado. Al elegir un plan se
@@ -144,10 +145,10 @@ export function SubscriptionPlans({
         <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm">
           <p className="mb-2">
             Elegí <strong>un solo plan</strong> para tu prueba de 14 días
-            {stripeSimulate ? " (modo demo)." : " con tarjeta."}
+            {stripeSimulate ? " (modo demo)." : " con tarjeta o pago local en Honduras."}
           </p>
           <p className="text-muted-foreground text-xs">
-            Solo podés tener Básico o Pro activo, no ambos.
+            Básico: hasta 200 chats nuevos/mes. Pro: ilimitados y varios empleados.
           </p>
         </div>
       )}
@@ -170,8 +171,16 @@ export function SubscriptionPlans({
             </strong>
             {" · "}
             Plan: <span className="capitalize">{access.plan}</span>
+            {access.plan === "basic" && (
+              <span className="block text-xs mt-1">
+                En prueba no aplicamos el tope de 200 conversaciones; al pasar a Básico
+                pagado sí.
+              </span>
+            )}
           </p>
         )}
+
+      <HondurasPaymentOptions businessName={businessName} planLabel="Básico o Pro" />
 
       {hasStripeCustomer && !stripeSimulate && (
         <div className="space-y-3 rounded-lg border p-4">
@@ -197,7 +206,7 @@ export function SubscriptionPlans({
               onClick={openPortal}
               disabled={loading === "portal"}
             >
-              {loading === "portal" ? "Abriendo..." : "Administrar facturación"}
+              {loading === "portal" ? "Abriendo..." : "Administrar facturación (tarjeta)"}
             </Button>
             <Button
               variant="destructive"
@@ -212,7 +221,7 @@ export function SubscriptionPlans({
 
       <div className="grid gap-4 md:grid-cols-2">
         {(["basic", "pro"] as PlanId[]).map((plan) => {
-          const p = PLANS_UI[plan];
+          const p = PLANS[plan];
           const isCurrent = access.active && currentPlan === plan;
           const canSwitch = access.active && !isCurrent;
 
@@ -228,9 +237,9 @@ export function SubscriptionPlans({
                 </div>
                 <CardDescription>{p.description}</CardDescription>
                 <p className="text-3xl font-bold">
-                  {p.price}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /mes
+                  {p.priceLabel}
+                  <span className="text-sm font-normal text-muted-foreground block mt-1">
+                    {formatPlanPriceHn(plan)} · referencia Honduras
                   </span>
                 </p>
               </CardHeader>
@@ -266,16 +275,18 @@ export function SubscriptionPlans({
                         : access.reason === "pending"
                           ? stripeSimulate
                             ? `Empezar con ${p.name}`
-                            : `Probar ${p.name}`
+                            : `Probar ${p.name} (tarjeta)`
                           : stripeSimulate
                             ? `Activar ${p.name} (demo)`
-                            : "Suscribirme"}
+                            : "Suscribirme con tarjeta"}
                 </Button>
               </CardFooter>
             </Card>
           );
         })}
       </div>
+
+      <PricingDisclaimers className="text-left" />
     </div>
   );
 }

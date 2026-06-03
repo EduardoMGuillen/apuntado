@@ -32,6 +32,14 @@ export interface BusinessContext {
   manualTakeover: boolean;
   takenOverAt: string | null;
   subscriptionActive: boolean;
+  subscriptionPlan?: string;
+  conversationLimitReached?: boolean;
+  conversationUsage?: {
+    used: number;
+    limit: number | null;
+    monthLabel: string;
+    applies: boolean;
+  };
   systemPrompt: string;
   availability: string;
 }

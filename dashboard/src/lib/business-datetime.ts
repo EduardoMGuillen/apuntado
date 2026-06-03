@@ -1,4 +1,4 @@
-import { addDays, format, startOfDay } from "date-fns";
+import { addDays, addMonths, format, startOfDay, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 
@@ -9,6 +9,25 @@ export function getStartOfBusinessDayUtc(
 ): Date {
   const zoned = toZonedTime(base, timezone);
   return fromZonedTime(startOfDay(zoned), timezone);
+}
+
+/** Inicio y fin del mes calendario actual en la zona del negocio (fin exclusivo). */
+export function getCalendarMonthRangeUtc(
+  timezone: string,
+  base: Date = new Date()
+): { start: Date; end: Date } {
+  const zoned = toZonedTime(base, timezone);
+  const monthStartLocal = startOfMonth(zoned);
+  const nextMonthLocal = addMonths(monthStartLocal, 1);
+  return {
+    start: fromZonedTime(monthStartLocal, timezone),
+    end: fromZonedTime(nextMonthLocal, timezone),
+  };
+}
+
+/** Etiqueta del mes en curso para mostrar uso (ej. "marzo 2026"). */
+export function formatCurrentMonthLabel(timezone: string): string {
+  return formatInTimeZone(new Date(), timezone, "MMMM yyyy", { locale: es });
 }
 
 /** Rango UTC para consultas Prisma (hoy + N días en zona del negocio). */

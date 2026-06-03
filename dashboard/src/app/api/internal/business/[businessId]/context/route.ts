@@ -10,6 +10,7 @@ import {
   buildCustomerAppointmentsPromptSection,
   resolveCustomerForContext,
 } from "@/lib/customer-context";
+import { getConversationUsage } from "@/lib/conversation-usage";
 
 export async function GET(
   req: NextRequest,
@@ -85,6 +86,12 @@ export async function GET(
 
   const enrichedPrompt = `${systemPrompt}\n\n${customerProfile}\n\n${appointmentsSection}`;
   const subscriptionAccess = getSubscriptionAccess(business.subscription);
+  const conversationUsage = await getConversationUsage(
+    businessId,
+    subscriptionAccess.plan,
+    timezone,
+    phone
+  );
 
   return NextResponse.json({
     id: business.id,
@@ -95,6 +102,14 @@ export async function GET(
     manualTakeover: customer?.manualTakeover ?? false,
     takenOverAt: customer?.takenOverAt?.toISOString() ?? null,
     subscriptionActive: subscriptionAccess.active,
+    subscriptionPlan: subscriptionAccess.plan,
+    conversationLimitReached: conversationUsage.limitReached,
+    conversationUsage: {
+      used: conversationUsage.used,
+      limit: conversationUsage.limit,
+      monthLabel: conversationUsage.monthLabel,
+      applies: conversationUsage.applies,
+    },
     systemPrompt: enrichedPrompt,
     availability,
     timezone,

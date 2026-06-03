@@ -31,8 +31,8 @@ const FEATURES = [
   },
   {
     icon: Shield,
-    title: "Sin spam",
-    desc: "Solo respuestas a mensajes entrantes. Protegemos tu número.",
+    title: "Cuota fija, sin sorpresas",
+    desc: "No somos BSP oficial de Meta: sin factura extra por cada mensaje como en plataformas con API.",
     className: "",
   },
   {
