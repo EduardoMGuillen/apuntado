@@ -7,7 +7,7 @@ import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import { getSubscriptionAccess } from "@/lib/subscription";
 import { isStripeConfigured } from "@/lib/stripe-config";
 import { Badge } from "@/components/ui/badge";
-import { getConversationUsage } from "@/lib/conversation-usage";
+import { getMonthlyPlanUsage } from "@/lib/plan-usage";
 import { resolveBusinessTimezone } from "@/lib/timezones";
 
 export default async function SuscripcionPage({
@@ -29,10 +29,11 @@ export default async function SuscripcionPage({
   const access = getSubscriptionAccess(business.subscription);
   const stripeSimulate = !isStripeConfigured();
   const timezone = resolveBusinessTimezone(business.settings?.timezone);
-  const usage = await getConversationUsage(
+  const usage = await getMonthlyPlanUsage(
     business.id,
     access.plan,
-    timezone
+    timezone,
+    access.reason
   );
 
   return (
@@ -61,12 +62,8 @@ export default async function SuscripcionPage({
         <Suspense fallback={<p>Cargando planes...</p>}>
           <SubscriptionPlans
             businessId={business.id}
-            usage={{
-              used: usage.used,
-              limit: usage.limit,
-              monthLabel: usage.monthLabel,
-              applies: usage.applies,
-            }}
+            usage={usage}
+            subscriptionReason={access.reason}
             access={{
               active: access.active,
               reason: access.reason,

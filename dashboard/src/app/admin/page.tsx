@@ -35,6 +35,7 @@ export default async function AdminOverviewPage() {
         <StatCard label="Negocios" value={String(businesses)} href="/admin/businesses" />
         <StatCard label="Suscripciones activas" value={String(activeSubs)} href="/admin/businesses" />
         <StatCard label="WhatsApp conectados" value={String(waConnected)} href="/admin/businesses" />
+        <StatCard label="Uso IA / mes" value="Ver" href="/admin/usage" />
       </div>
 
       <section className="glass-card rounded-2xl p-6">

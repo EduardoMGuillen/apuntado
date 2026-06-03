@@ -26,7 +26,7 @@ export function LandingPricing() {
           </h2>
           <p className="mt-4 text-muted-foreground">
             Una cuota mensual todo incluido — sin sumar costos de Meta por mensaje como
-            los CRM con API oficial. 14 días gratis con tarjeta · Cancelá cuando querás.
+            los CRM con API oficial. Prueba 14 días: hasta 100 chats y 100 respuestas IA/mes.
           </p>
           <ul className="mt-6 space-y-2 text-left text-sm text-muted-foreground sm:mx-auto sm:max-w-md">
             {MARKETING_VALUE_LINES.map((line) => (

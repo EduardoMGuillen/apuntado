@@ -1,5 +1,5 @@
 const CACHE_TTL_MS = 15 * 60 * 1000;
-const MAX_CHARS = 6000;
+const MAX_CHARS = 3500;
 
 const cache = new Map<string, { text: string; fetchedAt: number }>();
 

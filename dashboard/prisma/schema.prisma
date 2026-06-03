@@ -100,8 +100,24 @@ model Business {
   settings     BusinessSettings?
   subscription Subscription?
   whatsappSession WhatsappSession?
+  monthlyUsage BusinessMonthlyUsage[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+}
+
+// Contador mensual por negocio (zona horaria del negocio, clave yyyy-MM).
+model BusinessMonthlyUsage {
+  id              String   @id @default(cuid())
+  businessId      String
+  periodKey       String
+  aiCallCount     Int      @default(0)
+  alertWarnSent   Boolean  @default(false)
+  alertLimitSent  Boolean  @default(false)
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([businessId, periodKey])
+  @@index([periodKey])
 }
 
 model Service {

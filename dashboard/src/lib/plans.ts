@@ -4,7 +4,44 @@ export type PlanId = "basic" | "pro";
 export const TRIAL_DAYS = 14;
 
 /** Chats distintos con mensaje del cliente por mes calendario (zona del negocio). */
+export const TRIAL_MONTHLY_CONVERSATION_LIMIT = 100;
+export const TRIAL_MONTHLY_AI_CALL_LIMIT = 100;
 export const BASIC_MONTHLY_CONVERSATION_LIMIT = 200;
+/** Respuestas con llamada a Claude Haiku (plan Básico). */
+export const BASIC_MONTHLY_AI_CALL_LIMIT = 1200;
+/** Aviso en panel y email interno al super admin. */
+export const USAGE_WARN_RATIO = 0.85;
+
+export type UsageTier = "trial" | "basic" | "pro";
+
+export function resolveUsageTier(
+  plan: string,
+  reason?: string
+): UsageTier {
+  if (reason === "trial") return "trial";
+  if (plan === "pro") return "pro";
+  return "basic";
+}
+
+export function getUsageLimitsForTier(tier: UsageTier): {
+  conversations: number | null;
+  aiCalls: number | null;
+} {
+  switch (tier) {
+    case "trial":
+      return {
+        conversations: TRIAL_MONTHLY_CONVERSATION_LIMIT,
+        aiCalls: TRIAL_MONTHLY_AI_CALL_LIMIT,
+      };
+    case "basic":
+      return {
+        conversations: BASIC_MONTHLY_CONVERSATION_LIMIT,
+        aiCalls: BASIC_MONTHLY_AI_CALL_LIMIT,
+      };
+    case "pro":
+      return { conversations: null, aiCalls: null };
+  }
+}
 
 /** Referencia en lempiras (~24.5 L/USD) para marketing en Honduras. */
 export const PLAN_PRICE_HNL: Record<PlanId, number> = {
@@ -30,12 +67,13 @@ export const PLANS: Record<
     name: "Básico",
     priceLabel: "$20/mes",
     description:
-      "Un empleado · hasta 200 chats nuevos al mes · menos que media jornada de recepcionista.",
+      "Un empleado · hasta 200 chats y 1 200 respuestas IA/mes · ideal para volumen moderado.",
     features: [
       "Suscripción todo incluido (sin cargo Meta por mensaje)",
       "Bot de WhatsApp 24/7 en tu número",
       "Agenda automática y recordatorios 24h",
       "Hasta 200 conversaciones nuevas/mes",
+      "Hasta 1 200 respuestas con IA/mes",
       "Control manual cuando lo necesités",
     ],
   },
@@ -43,17 +81,23 @@ export const PLANS: Record<
     name: "Pro",
     priceLabel: "$35/mes",
     description:
-      "Varios empleados, chats ilimitados y más volumen — para cuando el Básico se queda corto.",
+      "Para negocios con mucho WhatsApp: chats y respuestas IA ilimitadas, varios empleados.",
     features: [
       "Todo lo del plan Básico",
+      "Conversaciones nuevas ilimitadas",
+      "Respuestas con IA ilimitadas",
       "Múltiples empleados en alertas y equipo",
-      "Conversaciones ilimitadas",
-      "Ideal si superás 200 chats/mes",
+      "Recomendado si superás 200 chats o 1 200 respuestas IA/mes",
       "Soporte prioritario",
     ],
   },
 };
 
+export function planHasUsageLimits(tier: UsageTier): boolean {
+  return tier === "basic" || tier === "trial";
+}
+
+/** @deprecated Use planHasUsageLimits(resolveUsageTier(...)) */
 export function planHasConversationLimit(plan: string): boolean {
   return plan === "basic";
 }

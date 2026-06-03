@@ -122,3 +122,11 @@ export async function sendSubscriptionActiveEmail(params: {
     html: subscriptionActiveEmailHtml({ ...params, appUrl: appUrl() }),
   });
 }
+
+export async function sendUsageAlertEmail(params: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  return sendEmail(params);
+}

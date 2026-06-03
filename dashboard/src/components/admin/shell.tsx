@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Users,
   Building2,
+  BarChart3,
   LogOut,
   ArrowLeft,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/admin", label: "Resumen", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Usuarios", icon: Users, exact: false },
   { href: "/admin/businesses", label: "Negocios", icon: Building2, exact: false },
+  { href: "/admin/usage", label: "Uso IA", icon: BarChart3, exact: false },
 ] as const;
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

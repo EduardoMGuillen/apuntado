@@ -10,7 +10,7 @@ import {
   buildCustomerAppointmentsPromptSection,
   resolveCustomerForContext,
 } from "@/lib/customer-context";
-import { getConversationUsage } from "@/lib/conversation-usage";
+import { getMonthlyPlanUsage } from "@/lib/plan-usage";
 
 export async function GET(
   req: NextRequest,
@@ -86,10 +86,11 @@ export async function GET(
 
   const enrichedPrompt = `${systemPrompt}\n\n${customerProfile}\n\n${appointmentsSection}`;
   const subscriptionAccess = getSubscriptionAccess(business.subscription);
-  const conversationUsage = await getConversationUsage(
+  const usage = await getMonthlyPlanUsage(
     businessId,
     subscriptionAccess.plan,
     timezone,
+    subscriptionAccess.reason,
     phone
   );
 
@@ -103,12 +104,21 @@ export async function GET(
     takenOverAt: customer?.takenOverAt?.toISOString() ?? null,
     subscriptionActive: subscriptionAccess.active,
     subscriptionPlan: subscriptionAccess.plan,
-    conversationLimitReached: conversationUsage.limitReached,
+    usageTier: usage.tier,
+    botBlocked: usage.botBlocked,
+    blockReason: usage.blockReason,
+    conversationLimitReached: usage.conversations.limitReached,
+    aiCallLimitReached: usage.aiCalls.limitReached,
     conversationUsage: {
-      used: conversationUsage.used,
-      limit: conversationUsage.limit,
-      monthLabel: conversationUsage.monthLabel,
-      applies: conversationUsage.applies,
+      used: usage.conversations.used,
+      limit: usage.conversations.limit,
+      monthLabel: usage.monthLabel,
+      applies: usage.applies,
+    },
+    aiCallUsage: {
+      used: usage.aiCalls.used,
+      limit: usage.aiCalls.limit,
+      monthLabel: usage.monthLabel,
     },
     systemPrompt: enrichedPrompt,
     availability,

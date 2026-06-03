@@ -33,12 +33,21 @@ export interface BusinessContext {
   takenOverAt: string | null;
   subscriptionActive: boolean;
   subscriptionPlan?: string;
+  usageTier?: string;
+  botBlocked?: boolean;
+  blockReason?: "conversation" | "ai" | null;
   conversationLimitReached?: boolean;
+  aiCallLimitReached?: boolean;
   conversationUsage?: {
     used: number;
     limit: number | null;
     monthLabel: string;
     applies: boolean;
+  };
+  aiCallUsage?: {
+    used: number;
+    limit: number | null;
+    monthLabel: string;
   };
   systemPrompt: string;
   availability: string;
@@ -143,6 +152,13 @@ export async function setSessionConnected(
   await apiFetch(`/sessions/${businessId}`, {
     method: "PATCH",
     body: JSON.stringify({ connected }),
+  });
+}
+
+export async function recordAiCall(businessId: string): Promise<void> {
+  await apiFetch("/usage/ai-call", {
+    method: "POST",
+    body: JSON.stringify({ businessId }),
   });
 }
 

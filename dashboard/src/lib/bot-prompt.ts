@@ -241,9 +241,13 @@ export function buildAvailabilityText(
 
   if (existingAppointments.length > 0) {
     lines.push("\nCitas ya agendadas (próximos 3 días):");
-    for (const apt of existingAppointments) {
+    const capped = existingAppointments.slice(0, 12);
+    for (const apt of capped) {
       const time = formatInTimeZone(apt.scheduledAt, timezone, "EEE d/M HH:mm", { locale: es });
       lines.push(`- ${time}`);
+    }
+    if (existingAppointments.length > 12) {
+      lines.push(`- … y ${existingAppointments.length - 12} más`);
     }
   }
 

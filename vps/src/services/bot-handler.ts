@@ -8,6 +8,7 @@ import {
   saveOutgoingMessage,
   createAppointmentFromBot,
   escalateToAgent,
+  recordAiCall,
 } from "./db.js";
 import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
@@ -21,7 +22,13 @@ const SUBSCRIPTION_INACTIVE_MESSAGE =
   "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
 
 const CONVERSATION_LIMIT_MESSAGE =
-  "Hola. Este mes se alcanzó el límite de conversaciones del plan Básico (200 chats nuevos). El negocio le atenderá en cuanto pueda. Para más volumen, el plan Pro ofrece conversaciones ilimitadas — consulte al negocio o a soporte de Apuntado. 🙏";
+  "Hola. Este mes se alcanzó el límite de conversaciones de su plan. El negocio le atenderá en cuanto pueda. Para más volumen, consulte al negocio sobre el plan Pro de Apuntado. 🙏";
+
+const AI_CALL_LIMIT_MESSAGE =
+  "Hola. Este mes se alcanzó el límite de respuestas automáticas con IA de su plan. El negocio le atenderá pronto. Para alto volumen de WhatsApp, el plan Pro incluye respuestas con IA ilimitadas — consulte al negocio. 🙏";
+
+const TRIAL_LIMIT_MESSAGE =
+  "Hola. La prueba gratuita alcanzó su límite mensual de uso. Active un plan en Apuntado para seguir con el asistente automático, o el negocio le responderá manualmente. 🙏";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 
@@ -32,7 +39,7 @@ function getAnthropicClient(): Anthropic | null {
 }
 
 const TRIVIAL_PATTERNS =
-  /^(ok|okay|vale|gracias|thanks|si|sí|no|bueno|listo|perfecto|👍|🙏|😊|✅|👌)[\s!.]*$/i;
+  /^(ok|okay|vale|gracias|thanks|thank you|si|sí|no|bueno|listo|perfecto|hola|hello|hi|hey|buenas|buenos días|buenas tardes|buenas noches|👍|🙏|😊|✅|👌)[\s!.]*$/i;
 
 const TRIVIAL_REPLIES = [
   "¡De nada! Cualquier cosa me escribís.",
@@ -294,12 +301,27 @@ export async function processBotReply(
     return;
   }
 
-  if (context.conversationLimitReached) {
+  if (context.botBlocked || context.conversationLimitReached) {
     const usage = context.conversationUsage;
     console.warn(
-      `[Bot] Límite plan Básico (${businessId}) — ${usage?.used ?? "?"}/${usage?.limit ?? 200} en ${usage?.monthLabel ?? "mes"}`
+      `[Bot] Límite conversaciones (${businessId}) — ${usage?.used ?? "?"}/${usage?.limit ?? "?"} tier=${context.usageTier ?? "?"}`
     );
-    await sendBotText(sockParams, CONVERSATION_LIMIT_MESSAGE);
+    const msg =
+      context.usageTier === "trial"
+        ? TRIAL_LIMIT_MESSAGE
+        : CONVERSATION_LIMIT_MESSAGE;
+    await sendBotText(sockParams, msg);
+    return;
+  }
+
+  if (context.aiCallLimitReached) {
+    const ai = context.aiCallUsage;
+    console.warn(
+      `[Bot] Límite respuestas IA (${businessId}) — ${ai?.used ?? "?"}/${ai?.limit ?? "?"} tier=${context.usageTier ?? "?"}`
+    );
+    const msg =
+      context.usageTier === "trial" ? TRIAL_LIMIT_MESSAGE : AI_CALL_LIMIT_MESSAGE;
+    await sendBotText(sockParams, msg);
     return;
   }
 
@@ -357,6 +379,10 @@ export async function processBotReply(
         textBlock?.type === "text"
           ? textBlock.text
           : "Disculpá, tuve un problemita. ¿Podés repetir?";
+
+      void recordAiCall(businessId).catch((err) => {
+        console.error("[Bot] Error registrando uso IA:", err);
+      });
 
       const { clean, confirmed, appointmentData } =
         stripConfirmationKeyword(rawReply);

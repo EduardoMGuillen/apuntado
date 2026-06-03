@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { getBusinessForSession } from "@/lib/business-access";
-import { getConversationUsage } from "@/lib/conversation-usage";
+import { getMonthlyPlanUsage } from "@/lib/plan-usage";
 import { getSubscriptionAccess } from "@/lib/subscription";
 import { resolveBusinessTimezone } from "@/lib/timezones";
 
@@ -14,8 +14,7 @@ export async function GET(
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const businessId = params.id;
-  const business = await getBusinessForSession(session, businessId, {
+  const business = await getBusinessForSession(session, params.id, {
     settings: true,
     subscription: true,
   });
@@ -26,15 +25,17 @@ export async function GET(
 
   const timezone = resolveBusinessTimezone(business.settings?.timezone);
   const access = getSubscriptionAccess(business.subscription);
-  const usage = await getConversationUsage(
-    businessId,
+  const usage = await getMonthlyPlanUsage(
+    business.id,
     access.plan,
-    timezone
+    timezone,
+    access.reason
   );
 
   return NextResponse.json({
     plan: access.plan,
     active: access.active,
+    reason: access.reason,
     ...usage,
   });
 }

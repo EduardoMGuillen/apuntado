@@ -19,7 +19,8 @@ import {
   formatPlanPriceHn,
 } from "@/lib/marketing-copy";
 import { HondurasPaymentOptions } from "@/components/billing/honduras-payment-options";
-import { ConversationUsageMeter } from "@/components/dashboard/conversation-usage-meter";
+import { PlanUsageMeter } from "@/components/dashboard/plan-usage-meter";
+import type { MonthlyPlanUsage } from "@/lib/plan-usage";
 import { PricingDisclaimers } from "@/components/marketing/pricing-disclaimers";
 
 type AccessInfo = {
@@ -31,17 +32,11 @@ type AccessInfo = {
   currentPeriodEnd: string | null;
 };
 
-interface UsageInfo {
-  used: number;
-  limit: number | null;
-  monthLabel: string;
-  applies: boolean;
-}
-
 interface Props {
   businessId: string;
   access: AccessInfo;
-  usage: UsageInfo;
+  usage: MonthlyPlanUsage;
+  subscriptionReason?: string;
   hasStripeCustomer: boolean;
   stripeSimulate?: boolean;
 }
@@ -50,6 +45,7 @@ export function SubscriptionPlans({
   businessId,
   access,
   usage,
+  subscriptionReason,
   hasStripeCustomer,
   stripeSimulate = false,
 }: Props) {
@@ -106,13 +102,10 @@ export function SubscriptionPlans({
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">{MARKETING_TRANSPARENCY_NOTE}</p>
 
-      <ConversationUsageMeter
-        used={usage.used}
-        limit={usage.limit}
-        monthLabel={usage.monthLabel}
-        applies={usage.applies}
-        plan={access.plan}
+      <PlanUsageMeter
+        usage={usage}
         businessId={businessId}
+        subscriptionReason={subscriptionReason}
       />
 
       {stripeSimulate && (
@@ -146,7 +139,8 @@ export function SubscriptionPlans({
             {stripeSimulate ? " (modo demo)." : " con tarjeta o pago local en Honduras."}
           </p>
           <p className="text-muted-foreground text-xs">
-            Básico: hasta 200 chats nuevos/mes. Pro: ilimitados y varios empleados.
+            Prueba: 100 chats y 100 respuestas IA/mes. Básico: 200 chats y 1 200 IA/mes.
+            Pro: ilimitado.
           </p>
         </div>
       )}
@@ -169,12 +163,6 @@ export function SubscriptionPlans({
             </strong>
             {" · "}
             Plan: <span className="capitalize">{access.plan}</span>
-            {access.plan === "basic" && (
-              <span className="block text-xs mt-1">
-                En prueba no aplicamos el tope de 200 conversaciones; al pasar a Básico
-                pagado sí.
-              </span>
-            )}
           </p>
         )}
 
