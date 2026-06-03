@@ -4,9 +4,12 @@ import { verifyVpsSecret } from "@/lib/bot-prompt";
 import { buildAvailabilityText, buildSystemPrompt } from "@/lib/bot-prompt";
 import { fetchWebsiteContent } from "@/lib/website-fetch";
 import { getSubscriptionAccess } from "@/lib/subscription";
-import { reconcileCustomerPhone } from "@/lib/customer-phone";
 import { resolveBusinessTimezone } from "@/lib/timezones";
 import { getBusinessDayRangeUtc } from "@/lib/business-datetime";
+import {
+  buildCustomerAppointmentsPromptSection,
+  resolveCustomerForContext,
+} from "@/lib/customer-context";
 
 export async function GET(
   req: NextRequest,
@@ -39,18 +42,9 @@ export async function GET(
     return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
   }
 
-  const normalizedPhone = await reconcileCustomerPhone(businessId, phone);
-
-  const customer = await prisma.customer.findUnique({
-    where: {
-      whatsappPhone_businessId: {
-        whatsappPhone: normalizedPhone,
-        businessId,
-      },
-    },
-  });
-
   const timezone = resolveBusinessTimezone(business.settings?.timezone);
+  const { customer, appointments: customerAppointments } =
+    await resolveCustomerForContext(businessId, phone, timezone);
   const { start: rangeStart, end: rangeEnd } = getBusinessDayRangeUtc(
     timezone,
     3
@@ -74,17 +68,22 @@ export async function GET(
     availability,
     timezone
   );
-  const customerContext = customer
+  const customerProfile = customer
     ? [
         "DATOS DEL CLIENTE ACTUAL:",
         `- Nombre: ${customer.name?.trim() || "no registrado"}`,
         `- Tipo: ${customer.clientType?.trim() || "no registrado"}`,
         "- Si un dato ya existe, no lo vuelvas a preguntar.",
       ].join("\n")
-    : "";
-  const enrichedPrompt = customerContext
-    ? `${systemPrompt}\n\n${customerContext}`
-    : systemPrompt;
+    : "DATOS DEL CLIENTE ACTUAL:\n- Cliente nuevo en este chat.";
+
+  const appointmentsSection = buildCustomerAppointmentsPromptSection(
+    customerAppointments,
+    timezone,
+    customer
+  );
+
+  const enrichedPrompt = `${systemPrompt}\n\n${customerProfile}\n\n${appointmentsSection}`;
   const subscriptionAccess = getSubscriptionAccess(business.subscription);
 
   return NextResponse.json({

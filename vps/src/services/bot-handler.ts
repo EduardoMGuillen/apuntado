@@ -92,6 +92,28 @@ function resolveEscalationCustomerMessage(
   return "El cliente solicitó hablar con un agente (sin texto legible).";
 }
 
+function inferCustomerNameFromHistory(
+  history: { body: string; fromClient: boolean }[]
+): string | null {
+  const patterns = [
+    /me llamo\s+([a-záéíóúñ\s]{2,50})/i,
+    /mi nombre (?:es|:)\s+([a-záéíóúñ\s]{2,50})/i,
+    /^soy\s+([a-záéíóúñ\s]{2,50})/im,
+  ];
+  const userTexts = history
+    .filter((m) => m.fromClient)
+    .map((m) => m.body)
+    .reverse();
+  for (const text of userTexts) {
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      const name = match?.[1]?.trim();
+      if (name && name.length >= 2) return name;
+    }
+  }
+  return null;
+}
+
 function stripConfirmationKeyword(response: string): {
   clean: string;
   confirmed: boolean;
@@ -335,30 +357,40 @@ export async function processBotReply(
       replyMenu = parsedMenu.menu;
 
       if (confirmed && appointmentData) {
+        let customerName = appointmentData.customerName.trim();
+        if (customerName.length < 2) {
+          const inferred = inferCustomerNameFromHistory(history);
+          if (inferred) customerName = inferred;
+        }
         try {
           await createAppointmentFromBot({
             businessId,
             customerPhone,
             serviceName: appointmentData.serviceName,
             scheduledAt: appointmentData.scheduledAt,
-            customerName: appointmentData.customerName,
+            customerName,
             clientType: appointmentData.clientType,
             employeeName: appointmentData.employeeName,
           });
           io.to(`business:${businessId}`).emit("appointment:new", {
             businessId,
             customerPhone,
-            customerName: appointmentData.customerName,
+            customerName,
             serviceName: appointmentData.serviceName,
             scheduledAt: appointmentData.scheduledAt,
           });
         } catch (err) {
           console.error("[Bot] Error creando cita:", err);
           reply =
-            `${reply}\n\n⚠️ Hubo un problema al registrar la cita en el sistema. El negocio te confirmará por este chat.`.trim();
+            `${reply}\n\n⚠️ No pude registrar la cita en el sistema. El negocio le confirmará por este chat.`.trim();
         }
       } else if (rawReply.includes("CITA_CONFIRMADA")) {
-        console.warn("[Bot] CITA_CONFIRMADA sin datos válidos — no se guardó en Citas");
+        console.warn(
+          "[Bot] CITA_CONFIRMADA sin datos válidos — no se guardó en Citas",
+          { customerPhone }
+        );
+        reply =
+          `${reply}\n\n⚠️ La cita quedó pendiente de registro en el sistema. Escriba su nombre completo si no lo indicó.`.trim();
       }
 
       if (escalate) {

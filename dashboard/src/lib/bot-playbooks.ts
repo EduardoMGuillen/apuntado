@@ -22,6 +22,11 @@ const DEFAULT_BOT_PLAYBOOKS_CASUAL: Record<BookingMode, BotPlaybook[]> = {
         "Listá los servicios con duración y precio. Si hay varios, usá MENU con opciones reformuladas.",
     },
     {
+      when: "preguntan a qué hora es su cita, cuándo es, o si tienen cita agendada",
+      action:
+        "Revisá la sección CITAS DE ESTE CLIENTE. Si hay cita listada, decí servicio, fecha y hora exactas y el nombre registrado. NO digas que no hay en sistema si aparece ahí.",
+    },
+    {
       when: "quieren agendar una cita",
       action:
         "Pedí nombre completo y tipo (empresa/particular) solo si falta. Si ya está en el historial, no lo repitas. Confirmá servicio, día y hora. Solo CITA_CONFIRMADA cuando tengas todo.",
@@ -119,6 +124,11 @@ const DEFAULT_BOT_PLAYBOOKS_FORMAL: Record<BookingMode, BotPlaybook[]> = {
       when: "preguntan qué servicios hay o cuánto cuesta",
       action:
         "Liste los servicios con duración y precio. Si hay varios, use MENU con opciones reformuladas.",
+    },
+    {
+      when: "preguntan a qué hora es su cita, cuándo es, o si tienen cita agendada",
+      action:
+        "Consulte la sección CITAS DE ESTE CLIENTE. Si hay cita listada, indique servicio, fecha y hora exactas y el nombre registrado. NO diga que no hay en sistema si aparece ahí.",
     },
     {
       when: "quieren agendar una cita",

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withVpsAuth } from "@/lib/internal-api";
+import { buildPhoneVariants } from "@/lib/customer-context";
+import { reconcileCustomerPhone } from "@/lib/customer-phone";
 
 export const GET = withVpsAuth(async (req: NextRequest) => {
   const businessId = req.nextUrl.pathname.split("/").pop();
@@ -11,8 +13,13 @@ export const GET = withVpsAuth(async (req: NextRequest) => {
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 });
   }
 
+  const canonical = await reconcileCustomerPhone(businessId, phone);
+  const variants = Array.from(
+    new Set([...buildPhoneVariants(canonical), ...buildPhoneVariants(phone)])
+  );
+
   const messages = await prisma.whatsappMessage.findMany({
-    where: { businessId, customerPhone: phone },
+    where: { businessId, customerPhone: { in: variants } },
     orderBy: { createdAt: "desc" },
     take: limit,
     select: { body: true, fromClient: true, createdAt: true },
