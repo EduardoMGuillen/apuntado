@@ -43,7 +43,7 @@ export default async function SuscripcionPage({
           <p className="text-muted-foreground">
             {stripeSimulate
               ? "Modo demo: un solo plan activo (Básico o Pro)."
-              : "Cuota fija todo incluido. Tarjeta internacional o pago local Click / WhatsApp."}
+              : "Cuota fija todo incluido. Tarjeta internacional o coordinación por WhatsApp en Honduras."}
           </p>
           <div className="mt-2 flex gap-2">
             <Badge variant="secondary" className="capitalize">
@@ -61,7 +61,6 @@ export default async function SuscripcionPage({
         <Suspense fallback={<p>Cargando planes...</p>}>
           <SubscriptionPlans
             businessId={business.id}
-            businessName={business.name}
             usage={{
               used: usage.used,
               limit: usage.limit,

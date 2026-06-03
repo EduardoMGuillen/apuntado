@@ -15,7 +15,7 @@ export function LandingCta() {
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-lg text-white/65">
               Desde ~L. 490/mes — menos que contratar a alguien medio tiempo para el
-              WhatsApp. En Honduras también podés pagar con transferencia Click.
+              WhatsApp. En Honduras coordiná el pago por transferencia vía WhatsApp.
             </p>
             <Link
               href="/register"

@@ -1,53 +1,28 @@
-/** Pagos locales Honduras: transferencia Click + WhatsApp Nexus (configurable por env). */
+/** Pago local Honduras: solo enlace a WhatsApp (sin datos bancarios en la web). */
+
+const DEFAULT_WHATSAPP_E164 = "50498823627";
+
+export const HONDURAS_BILLING_WHATSAPP_MESSAGE =
+  "Hola, quiero información sobre el pago vía transferencia en Honduras.";
 
 function digitsOnly(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
-export type HondurasBillingConfig = {
-  whatsappE164: string | null;
-  whatsappDisplay: string | null;
-  clickHolder: string | null;
-  clickBank: string | null;
-  clickAccount: string | null;
-  configured: boolean;
-};
-
-export function getHondurasBillingConfig(): HondurasBillingConfig {
+export function getBillingWhatsAppE164(): string {
   const raw = process.env.NEXT_PUBLIC_BILLING_WHATSAPP?.trim() ?? "";
   const digits = digitsOnly(raw);
-  const whatsappE164 =
-    digits.length >= 8 ? (digits.startsWith("504") ? digits : `504${digits}`) : null;
-
-  const clickHolder = process.env.NEXT_PUBLIC_CLICK_ACCOUNT_HOLDER?.trim() || null;
-  const clickBank = process.env.NEXT_PUBLIC_CLICK_BANK?.trim() || null;
-  const clickAccount = process.env.NEXT_PUBLIC_CLICK_ACCOUNT?.trim() || null;
-
-  const configured = !!(whatsappE164 || (clickBank && clickAccount));
-
-  return {
-    whatsappE164,
-    whatsappDisplay: whatsappE164 ? `+${whatsappE164}` : null,
-    clickHolder,
-    clickBank,
-    clickAccount,
-    configured,
-  };
+  if (digits.length >= 8) {
+    return digits.startsWith("504") ? digits : `504${digits}`;
+  }
+  return DEFAULT_WHATSAPP_E164;
 }
 
-export function buildBillingWhatsAppUrl(
-  businessName: string,
-  planLabel: string
-): string | null {
-  const { whatsappE164 } = getHondurasBillingConfig();
-  if (!whatsappE164) return null;
+export function getBillingWhatsAppDisplay(): string {
+  return `+${getBillingWhatsAppE164()}`;
+}
 
-  const text = [
-    "Hola, quiero activar Apuntado.",
-    `Negocio: ${businessName}`,
-    `Plan: ${planLabel}`,
-    "Pago: transferencia Click (adjunto comprobante).",
-  ].join(" ");
-
-  return `https://wa.me/${whatsappE164}?text=${encodeURIComponent(text)}`;
+export function buildBillingWhatsAppUrl(): string {
+  const phone = getBillingWhatsAppE164();
+  return `https://wa.me/${phone}?text=${encodeURIComponent(HONDURAS_BILLING_WHATSAPP_MESSAGE)}`;
 }

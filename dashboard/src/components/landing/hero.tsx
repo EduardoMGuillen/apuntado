@@ -64,7 +64,7 @@ export function LandingHero() {
               citas — cuota fija, sin cargo Meta por mensaje.
             </p>
             <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70 lg:justify-start">
-              {["14 días gratis", "Todo incluido", "Pago Click en HN", "GT · SV · HN · NI · CR · PA"].map(
+              {["14 días gratis", "Todo incluido", "Pago por WhatsApp en HN", "GT · SV · HN · NI · CR · PA"].map(
                 (item) => (
                   <li key={item} className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-accent" />

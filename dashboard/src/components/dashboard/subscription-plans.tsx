@@ -40,7 +40,6 @@ interface UsageInfo {
 
 interface Props {
   businessId: string;
-  businessName: string;
   access: AccessInfo;
   usage: UsageInfo;
   hasStripeCustomer: boolean;
@@ -49,7 +48,6 @@ interface Props {
 
 export function SubscriptionPlans({
   businessId,
-  businessName,
   access,
   usage,
   hasStripeCustomer,
@@ -180,7 +178,7 @@ export function SubscriptionPlans({
           </p>
         )}
 
-      <HondurasPaymentOptions businessName={businessName} planLabel="Básico o Pro" />
+      <HondurasPaymentOptions />
 
       {hasStripeCustomer && !stripeSimulate && (
         <div className="space-y-3 rounded-lg border p-4">
