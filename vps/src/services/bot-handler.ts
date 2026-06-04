@@ -336,6 +336,7 @@ export async function processBotReply(
 
   let reply: string;
   let replyMenu: ReturnType<typeof parseReplyMenu>["menu"] = undefined;
+  let escalatedThisTurn = false;
 
   if (isTrivialMessage(combinedBody)) {
     reply = randomTrivialReply();
@@ -432,6 +433,7 @@ export async function processBotReply(
       }
 
       if (escalate) {
+        escalatedThisTurn = true;
         try {
           const escalation = await escalateToAgent({
             businessId,
@@ -457,6 +459,20 @@ export async function processBotReply(
           console.error("[Bot] Error escalando a agente:", err);
         }
       }
+    }
+  }
+
+  if (!escalatedThisTurn) {
+    const fresh = await getBusinessContext(businessId, customerPhone);
+    if (fresh.manualTakeover) {
+      console.log(
+        `[Bot] Control manual activo (post-IA) — no se envía respuesta a ${customerPhone}`
+      );
+      io.to(`business:${businessId}`).emit("takeover:waiting", {
+        businessId,
+        customerPhone,
+      });
+      return;
     }
   }
 

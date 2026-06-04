@@ -8,7 +8,6 @@ import { sessionRouter } from "./routes/sessions.js";
 import { messageRouter } from "./routes/messages.js";
 import { healthRouter } from "./routes/health.js";
 import { setupSocketHandlers } from "./socket/handlers.js";
-import { startTakeoverTimeoutJob } from "./jobs/takeover-timeout.js";
 import { startReminderJob } from "./jobs/reminders.js";
 import { getCorsOrigins } from "./lib/cors.js";
 import { restorePersistedSessions } from "./services/whatsapp.js";
@@ -35,7 +34,7 @@ app.use("/api/messages", authMiddleware, messageRouter);
 
 setupSocketHandlers(io);
 
-startTakeoverTimeoutJob();
+// Control manual solo se libera desde el panel («Devolver al bot»), sin timeout automático.
 startReminderJob();
 
 httpServer.listen(PORT, "0.0.0.0", () => {

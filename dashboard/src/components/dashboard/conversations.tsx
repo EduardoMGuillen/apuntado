@@ -234,13 +234,8 @@ export function ConversationsClient({ business, customers: initial }: Props) {
 
   function statusBadge(customer: Customer) {
     if (customer.manualTakeover) {
-      const waiting =
-        customer.takenOverAt &&
-        Date.now() - new Date(customer.takenOverAt).getTime() > 10 * 60 * 1000;
       return (
-        <Badge variant={waiting ? "destructive" : "outline"}>
-          {waiting ? "🔴 Esperando +10 min" : "🟡 Control manual"}
-        </Badge>
+        <Badge variant="outline">🟡 Control manual</Badge>
       );
     }
     return <Badge variant="secondary">🟢 Bot activo</Badge>;
