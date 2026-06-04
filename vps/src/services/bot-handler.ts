@@ -14,12 +14,17 @@ import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
 import { stripEscalationKeyword } from "../lib/escalation.js";
 import { sendTextMessage } from "../lib/send-message.js";
-
-const DEFAULT_ESCALATION_REPLY =
-  "Gracias por escribir. Un agente de nuestro equipo se conectará contigo lo antes posible. 🙏";
-
-const SUBSCRIPTION_INACTIVE_MESSAGE =
-  "Hola, en este momento no podemos atender mensajes automáticos. Por favor contactá al negocio directamente o intentá más tarde. 🙏";
+import {
+  parseConversationTone,
+  pickTrivialReply,
+  getFallbackCustomerReply,
+  getConfigLoadErrorReply,
+  getAnthropicErrorReply,
+  getAnthropicEmptyReply,
+  getEscalationReply,
+  getSubscriptionInactiveReply,
+  type ConversationTone,
+} from "../lib/tone-messages.js";
 
 const CONVERSATION_LIMIT_MESSAGE =
   "Hola. Este mes se alcanzó el límite de conversaciones de su plan. El negocio le atenderá en cuanto pueda. Para más volumen, consulte al negocio sobre el plan Pro de Apuntado. 🙏";
@@ -41,17 +46,6 @@ function getAnthropicClient(): Anthropic | null {
 const TRIVIAL_PATTERNS =
   /^(ok|okay|vale|gracias|thanks|thank you|si|sí|no|bueno|listo|perfecto|hola|hello|hi|hey|buenas|buenos días|buenas tardes|buenas noches|👍|🙏|😊|✅|👌)[\s!.]*$/i;
 
-const TRIVIAL_REPLIES = [
-  "¡De nada! Cualquier cosa me escribís.",
-  "¡Listo! Aquí estamos pa' lo que necesités.",
-  "¡Perfecto! Nos vemos pronto.",
-  "¡Dale! Cualquier duda me avisás.",
-  "¡Gracias a vos! Estamos pa' servirte.",
-];
-
-const FALLBACK_CUSTOMER_REPLY =
-  "Gracias por escribir. Ya recibí tu mensaje, en breve te respondo con la información. 🙌";
-
 const INVALID_REPLY_PATTERNS = [
   /waiting for message/i,
   /this may take a while/i,
@@ -63,19 +57,16 @@ const INVALID_ESCALATION_PATTERNS = [
   /esperando este mensaje/i,
 ];
 
-function randomTrivialReply(): string {
-  return TRIVIAL_REPLIES[Math.floor(Math.random() * TRIVIAL_REPLIES.length)];
-}
-
 function isTrivialMessage(body: string): boolean {
   return TRIVIAL_PATTERNS.test(body.trim());
 }
 
-function sanitizeReply(reply: string): string {
+function sanitizeReply(reply: string, tone: ConversationTone): string {
   const clean = reply.trim();
-  if (!clean) return FALLBACK_CUSTOMER_REPLY;
+  const fallback = getFallbackCustomerReply(tone);
+  if (!clean) return fallback;
   if (INVALID_REPLY_PATTERNS.some((pattern) => pattern.test(clean))) {
-    return FALLBACK_CUSTOMER_REPLY;
+    return fallback;
   }
   return clean;
 }
@@ -226,7 +217,8 @@ export async function notifyIncomingMessage({
 async function sendBotText(
   params: IncomingParams,
   reply: string,
-  menu?: ReturnType<typeof parseReplyMenu>["menu"]
+  menu?: ReturnType<typeof parseReplyMenu>["menu"],
+  conversationTone?: string | null
 ): Promise<void> {
   const outboundJid = resolveReplyJid(params.customerPhone, params.replyJid);
   const sentText = await sendReplyWithMenu(
@@ -234,7 +226,8 @@ async function sendBotText(
     outboundJid,
     reply,
     menu,
-    params.customerPhone
+    params.customerPhone,
+    conversationTone
   );
   await saveOutgoingMessage(
     params.businessId,
@@ -288,16 +281,18 @@ export async function processBotReply(
     console.error("[Bot] Error obteniendo contexto del dashboard:", err);
     await sendBotText(
       sockParams,
-      "Disculpá, el asistente no pudo cargar la configuración del negocio. Intentá de nuevo en un momento. 🙏"
+      getConfigLoadErrorReply("formal")
     );
     return;
   }
+
+  const tone = parseConversationTone(context.conversationTone);
 
   if (!context.subscriptionActive) {
     console.warn(
       `[Bot] Suscripción inactiva (${context.name} / ${businessId}) — plan no permite bot`
     );
-    await sendBotText(sockParams, SUBSCRIPTION_INACTIVE_MESSAGE);
+    await sendBotText(sockParams, getSubscriptionInactiveReply(tone), undefined, tone);
     return;
   }
 
@@ -310,7 +305,7 @@ export async function processBotReply(
       context.usageTier === "trial"
         ? TRIAL_LIMIT_MESSAGE
         : CONVERSATION_LIMIT_MESSAGE;
-    await sendBotText(sockParams, msg);
+    await sendBotText(sockParams, msg, undefined, tone);
     return;
   }
 
@@ -321,7 +316,7 @@ export async function processBotReply(
     );
     const msg =
       context.usageTier === "trial" ? TRIAL_LIMIT_MESSAGE : AI_CALL_LIMIT_MESSAGE;
-    await sendBotText(sockParams, msg);
+    await sendBotText(sockParams, msg, undefined, tone);
     return;
   }
 
@@ -339,7 +334,7 @@ export async function processBotReply(
   let escalatedThisTurn = false;
 
   if (isTrivialMessage(combinedBody)) {
-    reply = randomTrivialReply();
+    reply = pickTrivialReply(tone);
   } else {
     const anthropic = getAnthropicClient();
     if (!anthropic) {
@@ -370,7 +365,9 @@ export async function processBotReply(
         console.error("[Bot] Error Anthropic:", err);
         await sendBotText(
           sockParams,
-          "Disculpá, tuve un problemita técnico. ¿Podés escribir de nuevo en un momento? 🙏"
+          getAnthropicErrorReply(tone),
+          undefined,
+          tone
         );
         return;
       }
@@ -379,7 +376,7 @@ export async function processBotReply(
       const rawReply =
         textBlock?.type === "text"
           ? textBlock.text
-          : "Disculpá, tuve un problemita. ¿Podés repetir?";
+          : getAnthropicEmptyReply(tone);
 
       void recordAiCall(businessId).catch((err) => {
         console.error("[Bot] Error registrando uso IA:", err);
@@ -392,7 +389,7 @@ export async function processBotReply(
       const parsedMenu = parseReplyMenu(afterEscalation);
       reply =
         parsedMenu.clean ||
-        (escalate ? DEFAULT_ESCALATION_REPLY : afterEscalation);
+        (escalate ? getEscalationReply(tone) : afterEscalation);
       replyMenu = parsedMenu.menu;
 
       if (confirmed && appointmentData) {
@@ -476,9 +473,9 @@ export async function processBotReply(
     }
   }
 
-  reply = sanitizeReply(reply);
+  reply = sanitizeReply(reply, tone);
   console.log(`[Bot] Respuesta enviada a ${customerPhone}`);
-  await sendBotText(sockParams, reply, replyMenu);
+  await sendBotText(sockParams, reply, replyMenu, tone);
 }
 
 /** Sin debounce: guarda y responde al instante (tests o uso directo). */

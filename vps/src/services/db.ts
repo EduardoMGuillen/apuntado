@@ -51,6 +51,7 @@ export interface BusinessContext {
   };
   systemPrompt: string;
   availability: string;
+  conversationTone?: string;
 }
 
 export interface MessageRecord {

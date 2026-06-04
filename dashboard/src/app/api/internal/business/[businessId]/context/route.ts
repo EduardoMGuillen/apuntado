@@ -11,6 +11,7 @@ import {
   resolveCustomerForContext,
 } from "@/lib/customer-context";
 import { getMonthlyPlanUsage } from "@/lib/plan-usage";
+import { parseConversationTone } from "@/lib/conversation-tones";
 import { getMergedAvailabilityBusy } from "@/lib/google-calendar/availability";
 import { getCalendarConnection } from "@/lib/google-calendar/client";
 
@@ -129,5 +130,8 @@ export async function GET(
     systemPrompt: enrichedPrompt,
     availability,
     timezone,
+    conversationTone: parseConversationTone(
+      business.settings?.conversationTone
+    ),
   });
 }

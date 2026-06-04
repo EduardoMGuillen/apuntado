@@ -1,6 +1,11 @@
 import type { WASocket } from "@whiskeysockets/baileys";
 import { resolveReplyJid } from "./reply-jid.js";
 import { sendTextMessage } from "./send-message.js";
+import {
+  parseConversationTone,
+  pickMenuConnector,
+  type ConversationTone,
+} from "./tone-messages.js";
 
 export interface ReplyMenu {
   prompt?: string;
@@ -8,15 +13,6 @@ export interface ReplyMenu {
 }
 
 const MENU_LINE = /MENU:\s*(\{[\s\S]*?\})\s*(?:\n|$)/;
-
-const MENU_CONNECTORS = [
-  "¿Cuál te interesa? Podés escribir:",
-  "Tocá o respondeme con una de estas:",
-  "¿Qué te agendo?",
-  "Cheque, estas son las opciones:",
-  "¿Cuál te funciona mejor?",
-  "Elegí la que te cuadre:",
-];
 
 export function parseReplyMenu(response: string): {
   clean: string;
@@ -60,10 +56,13 @@ function bodyAlreadyShowsMenu(body: string, options: string[]): boolean {
   return matched.length >= Math.min(2, options.length);
 }
 
-function buildTextMenu(body: string, menu: ReplyMenu): string {
+function buildTextMenu(
+  body: string,
+  menu: ReplyMenu,
+  tone: ConversationTone
+): string {
   const intro = body.trim() || menu.prompt?.trim() || "";
-  const connector =
-    MENU_CONNECTORS[Math.floor(Math.random() * MENU_CONNECTORS.length)];
+  const connector = pickMenuConnector(tone);
   const options = menu.options
     .map((option, index) => `${index + 1}. ${option}`)
     .join("\n");
@@ -80,13 +79,15 @@ export async function sendReplyWithMenu(
   jid: string,
   body: string,
   menu: ReplyMenu | undefined,
-  customerPhone?: string
+  customerPhone?: string,
+  conversationTone?: string | null
 ): Promise<string> {
+  const tone = parseConversationTone(conversationTone);
   let text: string;
   if (menu?.options.length) {
     text = bodyAlreadyShowsMenu(body, menu.options)
       ? body.trim()
-      : buildTextMenu(body, menu);
+      : buildTextMenu(body, menu, tone);
   } else {
     text = body;
   }
