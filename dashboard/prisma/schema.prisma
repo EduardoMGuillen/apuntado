@@ -234,7 +234,7 @@ model BusinessSettings {
   businessId        String   @unique
   bookingMode         String   @default("services")
   timezone            String   @default("America/Tegucigalpa")
-  conversationTone    String   @default("formal")
+  conversationTone    String   @default("casual_hn")
   welcomeMenuGreeting String?
   welcomeMenuOptions  String?  @db.Text
   websiteUrl          String?

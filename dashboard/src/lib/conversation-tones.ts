@@ -8,7 +8,7 @@ export const CONVERSATION_TONE_VALUES = [
 
 export type ConversationTone = (typeof CONVERSATION_TONE_VALUES)[number];
 
-export const DEFAULT_CONVERSATION_TONE: ConversationTone = "formal";
+export const DEFAULT_CONVERSATION_TONE: ConversationTone = "casual_hn";
 
 export const CONVERSATION_TONES: {
   id: ConversationTone;
@@ -16,16 +16,16 @@ export const CONVERSATION_TONES: {
   description: string;
 }[] = [
   {
+    id: "casual_hn",
+    label: "Casual (recomendado)",
+    description:
+      'Cercano con "tú", claro y amable. Sin voseo. Ideal para la mayoría de negocios.',
+  },
+  {
     id: "formal",
     label: "Formal y profesional",
     description:
-      "Usted, claro y corporativo. Recomendado para clínicas, bufetes y marcas serias.",
-  },
-  {
-    id: "casual_hn",
-    label: "Casual centroamericano",
-    description:
-      'Cercano con "vos" o "tú". Ideal para negocios locales informales.',
+      "Usted, claro y corporativo. Para clínicas, bufetes y marcas serias.",
   },
   {
     id: "warm",
@@ -80,10 +80,10 @@ export function buildConversationTonePromptSection(
 - PROHIBIDO: vos, tú, podés, saludá, decile, agregá, cheque, dale, puras, pa', y jerga local.
 - Lenguaje neutro en español internacional; sin regionalismos hondureños ni centroamericanos.
 - Profesional, cortés y claro. Esta regla anula cualquier ejemplo en voseo más abajo.`,
-    casual_hn: `TONO DE CONVERSACIÓN — ${config.label}:
-- Español centroamericano casual: cercano, claro y humano (podés usar "vos" o "tú").
-- Expresiones locales con moderación ("cheque", "dale", "puras", "pa'" cuando encaje).
-- Evitá sonar robótico o demasiado formal.`,
+    casual_hn: `TONO DE CONVERSACIÓN — ${config.label} (PRIORIDAD MÁXIMA):
+- Trate al cliente de "tú". Conjugación con tú: puedes, dime, confirma, te ayudo, está disponible.
+- PROHIBIDO voseo: vos, podés, tenés, saludá, decile, agregá, avisá, necesitás, escribís, pa', puras.
+- Cercano y claro, sin sonar corporativo ni demasiado frío. Sin jerga pesada.`,
     warm: `TONO DE CONVERSACIÓN — ${config.label}:
 - Amable, empático y paciente; preferí "usted" salvo que el cliente use "tú" primero.
 - Validá lo que el cliente dice antes de responder (ej. "Entiendo", "Con gusto").
@@ -93,7 +93,7 @@ export function buildConversationTonePromptSection(
 - Sin rodeos ni jerga local. Mantenga cortesía profesional.`,
     enthusiastic: `TONO DE CONVERSACIÓN — ${config.label}:
 - Energía positiva; emojis con moderación (máximo 1 por mensaje).
-- Puede usar "usted" o "tú" según suene natural, sin jerga local fuerte.`,
+- Preferir "tú" (puedes, te ayudo). PROHIBIDO voseo (vos, podés, pa', etc.).`,
   };
 
   return instructions[tone];

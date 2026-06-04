@@ -65,7 +65,7 @@ export function buildWelcomeMenuPromptSection(
   bookingMode: BookingMode,
   greeting: string | null | undefined,
   optionsRaw: string | null | undefined,
-  tone: ConversationTone = "formal"
+  tone: ConversationTone = "casual_hn"
 ): string {
   const { greeting: text, options } = resolveWelcomeMenu(
     bookingMode,
@@ -89,9 +89,9 @@ ${numbered}
 
   return `MENÚ DE BIENVENIDA (saludo inicial o cuando el cliente escribe hola/buenas sin pedido claro):
 - NO escribas la lista numerada en el texto del mensaje; el sistema la arma automáticamente.
-- Respondé SOLO con una línea MENU (invisible para el cliente) usando exactamente estas opciones:
+- Responde SOLO con una línea MENU (invisible para el cliente) usando exactamente estas opciones:
   MENU:{"prompt":${JSON.stringify(text)},"options":[${options.map((o) => JSON.stringify(o)).join(",")}]}
 - Opciones de referencia (mismo sentido, no las copies numeradas en el cuerpo):
 ${numbered}
-- Si el cliente elige una opción por número o texto, atendé según esa intención (agente → ESCALAR_AGENTE si aplica).`;
+- Si el cliente elige una opción por número o texto, atiende según esa intención (agente → ESCALAR_AGENTE si aplica).`;
 }

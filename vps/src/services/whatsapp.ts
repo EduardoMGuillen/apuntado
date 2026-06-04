@@ -309,7 +309,7 @@ export async function startSession(
           const lastNotice = placeholderNoticeAt.get(dedupeKey) ?? 0;
           if (now - lastNotice >= PLACEHOLDER_NOTICE_COOLDOWN_MS) {
             const fallbackText =
-              "No pude leer tu último mensaje completo. ¿Me lo podés reenviar en texto, por favor? 🙏";
+              "No pude leer tu último mensaje completo. ¿Puedes reenviarlo en texto, por favor?";
             try {
               const outboundJid = resolveReplyJid(
                 identity.customerPhone,

@@ -20,11 +20,16 @@ export function parseConversationTone(
   if (n && TONES.includes(n as ConversationTone)) {
     return n as ConversationTone;
   }
-  return "formal";
+  return "casual_hn";
 }
 
 function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)]!;
+}
+
+/** Registro tú (sin voseo). */
+function isTuRegister(tone: ConversationTone): boolean {
+  return tone === "casual_hn" || tone === "enthusiastic";
 }
 
 const TRIVIAL_FORMAL = [
@@ -35,10 +40,10 @@ const TRIVIAL_FORMAL = [
 ];
 
 const TRIVIAL_CASUAL = [
-  "¡De nada! Cualquier cosa me escribís.",
-  "¡Listo! Aquí estamos para lo que necesités.",
+  "¡De nada! Cualquier cosa, escríbeme.",
+  "¡Listo! Aquí estamos para lo que necesites.",
   "¡Perfecto! Nos vemos pronto.",
-  "¡Dale! Cualquier duda me avisás.",
+  "¡Gracias! Con gusto te ayudamos.",
 ];
 
 const TRIVIAL_WARM = [
@@ -54,9 +59,9 @@ const TRIVIAL_BRIEF = [
 ];
 
 const TRIVIAL_ENTHUSIASTIC = [
-  "¡Con gusto! Si necesita algo más, aquí estamos.",
+  "¡Con gusto! Si necesitas algo más, aquí estamos.",
   "¡Perfecto! Gracias por escribir.",
-  "¡De nada! Estamos para ayudarle.",
+  "¡De nada! Estamos para ayudarte.",
 ];
 
 export function pickTrivialReply(tone: ConversationTone): string {
@@ -75,54 +80,54 @@ export function pickTrivialReply(tone: ConversationTone): string {
 }
 
 export function getFallbackCustomerReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
+  if (isTuRegister(tone)) {
     return "Gracias por escribir. Ya recibí tu mensaje; en breve te respondo con la información.";
   }
   return "Gracias por escribir. Recibí su mensaje; en breve le respondo con la información.";
 }
 
 export function getConfigLoadErrorReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
-    return "Disculpá, el asistente no pudo cargar la configuración. Intentá de nuevo en un momento.";
+  if (isTuRegister(tone)) {
+    return "Disculpa, el asistente no pudo cargar la configuración. Intenta de nuevo en un momento.";
   }
   return "Disculpe, el asistente no pudo cargar la configuración. Intente de nuevo en un momento.";
 }
 
 export function getAnthropicErrorReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
-    return "Disculpá, tuve un problema técnico. ¿Podés escribir de nuevo en un momento?";
+  if (isTuRegister(tone)) {
+    return "Disculpa, tuve un problema técnico. ¿Puedes escribir de nuevo en un momento?";
   }
   return "Disculpe, hubo un problema técnico. ¿Puede escribir de nuevo en un momento?";
 }
 
 export function getAnthropicEmptyReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
-    return "Disculpá, tuve un problemita. ¿Podés repetir?";
+  if (isTuRegister(tone)) {
+    return "Disculpa, no pude procesar tu mensaje. ¿Puedes repetirlo?";
   }
   return "Disculpe, no pude procesar su mensaje. ¿Puede repetirlo?";
 }
 
 export function getEscalationReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
-    return "Gracias por escribir. Un agente del equipo se conectará con vos lo antes posible.";
+  if (isTuRegister(tone)) {
+    return "Gracias por escribir. Un agente del equipo se conectará contigo lo antes posible.";
   }
   return "Gracias por escribir. Un agente de nuestro equipo se conectará con usted lo antes posible.";
 }
 
 export function getSubscriptionInactiveReply(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
-    return "Hola, en este momento no podemos atender mensajes automáticos. Contactá al negocio directamente o intentá más tarde.";
+  if (isTuRegister(tone)) {
+    return "Hola, en este momento no podemos atender mensajes automáticos. Contacta al negocio directamente o intenta más tarde.";
   }
   return "Hola, en este momento no podemos atender mensajes automáticos. Contacte al negocio directamente o intente más tarde.";
 }
 
 export function pickMenuConnector(tone: ConversationTone): string {
-  if (tone === "casual_hn") {
+  if (isTuRegister(tone)) {
     return pick([
-      "¿Cuál te interesa? Podés escribir:",
-      "Tocá o respondeme con una de estas:",
+      "¿Cuál te interesa? Puedes escribir:",
+      "Elige una de estas opciones:",
       "¿Qué te agendo?",
-      "Cheque, estas son las opciones:",
+      "Estas son las opciones:",
     ]);
   }
   return pick([

@@ -281,7 +281,7 @@ export async function processBotReply(
     console.error("[Bot] Error obteniendo contexto del dashboard:", err);
     await sendBotText(
       sockParams,
-      getConfigLoadErrorReply("formal")
+      getConfigLoadErrorReply("casual_hn")
     );
     return;
   }

@@ -14,101 +14,101 @@ const DEFAULT_BOT_PLAYBOOKS_CASUAL: Record<BookingMode, BotPlaybook[]> = {
     {
       when: "saludan o escriben por primera vez",
       action:
-        "Saludá breve, presentate como asistente del negocio y preguntá en qué podés ayudar (cita, precio o disponibilidad).",
+        "Saluda breve, preséntate como asistente del negocio y pregunta en qué puedes ayudar (cita, precio o disponibilidad).",
     },
     {
       when: "preguntan qué servicios hay o cuánto cuesta",
       action:
-        "Listá los servicios con duración y precio. Si hay varios, usá MENU con opciones reformuladas.",
+        "Lista los servicios con duración y precio. Si hay varios, usa MENU con opciones reformuladas.",
     },
     {
       when: "preguntan a qué hora es su cita, cuándo es, o si tienen cita agendada",
       action:
-        "Revisá la sección CITAS DE ESTE CLIENTE. Si hay cita listada, decí servicio, fecha y hora exactas y el nombre registrado. NO digas que no hay en sistema si aparece ahí.",
+        "Revisa la sección CITAS DE ESTE CLIENTE. Si hay cita listada, di servicio, fecha y hora exactas y el nombre registrado. NO digas que no hay en sistema si aparece ahí.",
     },
     {
       when: "quieren agendar una cita",
       action:
-        "Pedí nombre completo y tipo (empresa/particular) solo si falta. Si ya está en el historial, no lo repitas. Confirmá servicio, día y hora. Solo CITA_CONFIRMADA cuando tengas todo.",
+        "Pide nombre completo y tipo (empresa/particular) solo si falta. Si ya está en el historial, no lo repitas. Confirma servicio, día y hora. Solo CITA_CONFIRMADA cuando tengas todo.",
     },
     {
       when: "preguntan por eventos, promos o novedades",
       action:
-        "Revisá CONTENIDO_WEB si existe y resumí lo relevante. Si no hay web, decí que consultás con el negocio.",
+        "Revisa CONTENIDO_WEB si existe y resume lo relevante. Si no hay web, di que consultas con el negocio.",
     },
     {
       when: "preguntan dirección, horario o cómo llegar",
       action:
-        "Usá HORARIO SEMANAL, ciudad y dirección del negocio. Complementá con CONTENIDO_WEB si tiene mapa o referencias.",
+        "Usa HORARIO SEMANAL, ciudad y dirección del negocio. Complementa con CONTENIDO_WEB si tiene mapa o referencias.",
     },
     {
-      when: "piden hablar con una persona, están molestos o no podés resolver",
+      when: "piden hablar con una persona, están molestos o no puedes resolver",
       action:
-        "Decile que un agente se conectará lo antes posible y agregá ESCALAR_AGENTE al final (el cliente no lo ve). Opcional: ESCALAR_DATA:{\"reason\":\"motivo breve\"}.",
+        "Dile que un agente se conectará lo antes posible y agrega ESCALAR_AGENTE al final (el cliente no lo ve). Opcional: ESCALAR_DATA:{\"reason\":\"motivo breve\"}.",
     },
   ],
   menu: [
     {
       when: "saludan o piden el menú",
       action:
-        "Mostrá ítems del MENÚ/CATÁLOGO. Usá MENU para platillos o categorías destacadas (variá el texto).",
+        "Muestra ítems del MENÚ/CATÁLOGO. Usa MENU para platillos o categorías destacadas (varía el texto).",
     },
     {
-      when: "preguntan precios o qué recomendás",
+      when: "preguntan precios o qué recomiendas",
       action:
-        "Recomendá 2-3 ítems del catálogo según lo que pidieron. Incluí precios cuando estén disponibles.",
+        "Recomienda 2-3 ítems del catálogo según lo que pidieron. Incluye precios cuando estén disponibles.",
     },
     {
       when: "quieren reservar mesa o hacer pedido",
       action:
-        "Tomá fecha, hora y cantidad de personas o detalle del pedido. Confirmá con CITA_DATA usando el ítem más cercano.",
+        "Toma fecha, hora y cantidad de personas o detalle del pedido. Confirma con CITA_DATA usando el ítem más cercano.",
     },
     {
       when: "preguntan por eventos, especiales o carta del día",
       action:
-        "Buscá en CONTENIDO_WEB eventos, promos o especiales y enviá un resumen claro con fechas si las hay.",
+        "Busca en CONTENIDO_WEB eventos, promos o especiales y envía un resumen claro con fechas si las hay.",
     },
     {
-      when: "no encontrás algo en el menú cargado",
+      when: "no encuentras algo en el menú cargado",
       action:
-        "Revisá CONTENIDO_WEB por si hay más opciones. Si no aparece, decí amablemente que consultás con cocina/local.",
+        "Revisa CONTENIDO_WEB por si hay más opciones. Si no aparece, di amablemente que consultas con cocina/local.",
     },
     {
       when: "piden hablar con alguien del local o hay un reclamo",
       action:
-        "Avisá que un agente se conectará pronto e incluí ESCALAR_AGENTE al final con ESCALAR_DATA si hay motivo.",
+        "Avisa que un agente se conectará pronto e incluye ESCALAR_AGENTE al final con ESCALAR_DATA si hay motivo.",
     },
   ],
   inquiries: [
     {
       when: "saludan o piden información general",
       action:
-        "Respondé breve y preguntá si quieren agendar una consulta o resolver una duda específica.",
+        "Responde breve y pregunta si quieren agendar una consulta o resolver una duda específica.",
     },
     {
       when: "quieren agendar cita o consulta",
       action:
-        "Preguntá motivo en una línea, proponé horarios según DISPONIBILIDAD y confirmá con CITA_DATA usando Consulta general.",
+        "Pregunta motivo en una línea, propone horarios según DISPONIBILIDAD y confirma con CITA_DATA usando Consulta general.",
     },
     {
       when: "preguntan por servicios, propiedades, casos o temas específicos",
       action:
-        "Si CONTENIDO_WEB tiene info, usala como fuente. Si no, respondé con lo que sepas del negocio sin inventar detalles.",
+        "Si CONTENIDO_WEB tiene info, úsala como fuente. Si no, responde con lo que sepas del negocio sin inventar detalles.",
     },
     {
       when: "preguntan por eventos, talleres o disponibilidad especial",
       action:
-        "Revisá CONTENIDO_WEB y listá eventos o fechas disponibles. Enviá con MENU si hay varias opciones.",
+        "Revisa CONTENIDO_WEB y lista eventos o fechas disponibles. Envía con MENU si hay varias opciones.",
     },
     {
       when: "la consulta es muy específica o legal/técnica",
       action:
-        "Respondé lo básico y ofrecé agendar una cita para tratar el tema con el profesional del negocio.",
+        "Responde lo básico y ofrece agendar una cita para tratar el tema con el profesional del negocio.",
     },
     {
       when: "piden hablar con un asesor o humano",
       action:
-        "Decile que un agente se conectará lo antes posible e incluí ESCALAR_AGENTE al final del mensaje.",
+        "Dile que un agente se conectará lo antes posible e incluye ESCALAR_AGENTE al final del mensaje.",
     },
   ],
 };
@@ -257,7 +257,7 @@ export function buildPlaybooksPromptSection(
   mode: BookingMode,
   customPlaybooks: BotPlaybook[],
   hasWebsiteContent: boolean,
-  tone: ConversationTone = "formal"
+  tone: ConversationTone = "casual_hn"
 ): string {
   const defaults = getDefaultBotPlaybooks(mode, tone);
   const all = [...defaults, ...customPlaybooks];
@@ -277,9 +277,9 @@ export function buildPlaybooksPromptSection(
     ? `- Antes de responder, identifique cuál escenario aplica al mensaje actual.
 - Puede combinar pasos si hace falta, pero no omita la confirmación de citas.
 - Si una regla indica conectar agente o incluye ESCALAR_AGENTE, indique al cliente que alguien del equipo se conectará pronto y agregue ESCALAR_AGENTE al final (invisible para el cliente).`
-    : `- Antes de responder, identificá cuál escenario aplica al mensaje actual.
-- Podés combinar pasos si hace falta, pero no saltees confirmación de citas.
-- Si una regla dice conectar agente o incluye ESCALAR_AGENTE, decile al cliente que alguien del equipo se conectará pronto y agregá ESCALAR_AGENTE al final (invisible para el cliente).`;
+    : `- Antes de responder, identifica cuál escenario aplica al mensaje actual.
+- Puedes combinar pasos si hace falta, pero no omitas la confirmación de citas.
+- Si una regla dice conectar agente o incluye ESCALAR_AGENTE, dile al cliente que alguien del equipo se conectará pronto y agrega ESCALAR_AGENTE al final (invisible para el cliente).`;
 
   return `GUÍA DE RESPUESTAS (siga estos pasos según lo que pida el cliente):
 ${lines.join("\n")}
