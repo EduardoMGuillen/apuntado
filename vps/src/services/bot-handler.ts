@@ -227,7 +227,8 @@ async function sendBotText(
     reply,
     menu,
     params.customerPhone,
-    conversationTone
+    conversationTone,
+    { businessId: params.businessId, source: "bot" }
   );
   await saveOutgoingMessage(
     params.businessId,
@@ -444,7 +445,10 @@ export async function processBotReply(
 
           for (const phone of escalation.notifyPhones) {
             const teamJid = phone.replace("+", "") + "@s.whatsapp.net";
-            await sendTextMessage(sock, teamJid, escalation.alertMessage);
+            await sendTextMessage(sock, teamJid, escalation.alertMessage, undefined, {
+              businessId,
+              source: "system",
+            });
           }
 
           io.to(`business:${businessId}`).emit("takeover:waiting", {

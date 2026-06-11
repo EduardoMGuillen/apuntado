@@ -5,6 +5,15 @@ import {
   type WASocket,
 } from "@whiskeysockets/baileys";
 import { resolveReplyJid } from "./reply-jid.js";
+import {
+  registerAppOutbound,
+  type AppOutboundSource,
+} from "./outbound-tracker.js";
+
+export type SendTextTrack = {
+  businessId: string;
+  source: AppOutboundSource;
+};
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,12 +45,15 @@ export async function resolveOutgoingJid(
 /**
  * Envía texto; usa assertSessions y el JID del hilo (incl. @lid) para E2E en iOS.
  */
+export type SendTextResult = { text: string; messageId?: string };
+
 export async function sendTextMessage(
   sock: WASocket,
   jid: string,
   text: string,
-  customerPhone?: string
-): Promise<string> {
+  customerPhone?: string,
+  track?: SendTextTrack
+): Promise<SendTextResult> {
   const target = await resolveOutgoingJid(sock, jid, customerPhone);
 
   console.log("[WhatsApp] Enviando mensaje", {
@@ -67,8 +79,10 @@ export async function sendTextMessage(
   await sleep(500);
 
   try {
-    await sock.sendMessage(target, { text });
-    return text;
+    const sent = await sock.sendMessage(target, { text });
+    const result = { text, messageId: sent?.key?.id ?? undefined };
+    if (track) registerAppOutbound(track.businessId, result.messageId, track.source);
+    return result;
   } catch (firstErr) {
     console.warn("[WhatsApp] Reintento de envío tras fallo E2E:", firstErr);
     await sleep(1500);
@@ -78,7 +92,9 @@ export async function sendTextMessage(
       /* ignore */
     }
     const retriedJid = await resolveOutgoingJid(sock, target, customerPhone);
-    await sock.sendMessage(retriedJid, { text });
-    return text;
+    const sent = await sock.sendMessage(retriedJid, { text });
+    const result = { text, messageId: sent?.key?.id ?? undefined };
+    if (track) registerAppOutbound(track.businessId, result.messageId, track.source);
+    return result;
   }
 }

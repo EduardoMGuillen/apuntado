@@ -79,6 +79,48 @@ export function ConversationsClient({ business, customers: initial }: Props) {
 
     socket.emit("join:business", business.id);
 
+    function upsertCustomerFromMessage(
+      customerPhone: string,
+      body: string,
+      createdAt: string,
+      manualTakeover?: boolean
+    ) {
+      const msgPhone = normalizeWhatsAppPhone(customerPhone);
+      setCustomers((prev) => {
+        const idx = prev.findIndex(
+          (c) => normalizeWhatsAppPhone(c.whatsappPhone) === msgPhone
+        );
+        if (idx >= 0) {
+          return prev.map((c) =>
+            normalizeWhatsAppPhone(c.whatsappPhone) === msgPhone
+              ? {
+                  ...c,
+                  lastMessage: body,
+                  lastMessageAt: createdAt,
+                  ...(manualTakeover
+                    ? {
+                        manualTakeover: true,
+                        takenOverAt: createdAt,
+                      }
+                    : {}),
+                }
+              : c
+          );
+        }
+        return [
+          {
+            whatsappPhone: customerPhone,
+            name: null,
+            manualTakeover: manualTakeover ?? false,
+            takenOverAt: manualTakeover ? createdAt : null,
+            lastMessage: body,
+            lastMessageAt: createdAt,
+          },
+          ...prev,
+        ];
+      });
+    }
+
     socket.on("message:new", (msg: Message & { customerPhone: string }) => {
       const msgPhone = normalizeWhatsAppPhone(msg.customerPhone);
       if (selected && msgPhone === normalizeWhatsAppPhone(selected)) {
@@ -87,18 +129,20 @@ export function ConversationsClient({ business, customers: initial }: Props) {
           setUnreadCount((prev) => prev + 1);
         }
       }
-      setCustomers((prev) =>
-        prev.map((c) =>
-          normalizeWhatsAppPhone(c.whatsappPhone) === msgPhone
-            ? {
-                ...c,
-                lastMessage: msg.body,
-                lastMessageAt: msg.createdAt,
-              }
-            : c
-        )
-      );
+      upsertCustomerFromMessage(msg.customerPhone, msg.body, msg.createdAt);
     });
+
+    socket.on(
+      "takeover:active",
+      (payload: { customerPhone: string; body: string; createdAt: string }) => {
+        upsertCustomerFromMessage(
+          payload.customerPhone,
+          payload.body,
+          payload.createdAt,
+          true
+        );
+      }
+    );
 
     return () => {
       socket.emit("leave:business", business.id);

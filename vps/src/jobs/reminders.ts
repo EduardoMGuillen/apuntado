@@ -28,7 +28,8 @@ export function startReminderJob(): void {
             apt.businessId,
             apt.customerPhone,
             msg,
-            apt.customerReplyJid ?? undefined
+            apt.customerReplyJid ?? undefined,
+            { source: "system" }
           );
         } catch (err) {
           console.error(`[Reminder] Error enviando a ${apt.customerPhone}:`, err);

@@ -1,6 +1,6 @@
 import type { WASocket } from "@whiskeysockets/baileys";
 import { resolveReplyJid } from "./reply-jid.js";
-import { sendTextMessage } from "./send-message.js";
+import { sendTextMessage, type SendTextTrack } from "./send-message.js";
 import {
   parseConversationTone,
   pickMenuConnector,
@@ -80,7 +80,8 @@ export async function sendReplyWithMenu(
   body: string,
   menu: ReplyMenu | undefined,
   customerPhone?: string,
-  conversationTone?: string | null
+  conversationTone?: string | null,
+  track?: SendTextTrack
 ): Promise<string> {
   const tone = parseConversationTone(conversationTone);
   let text: string;
@@ -94,6 +95,6 @@ export async function sendReplyWithMenu(
   const targetJid = customerPhone
     ? resolveReplyJid(customerPhone, jid)
     : jid;
-  await sendTextMessage(sock, targetJid, text, customerPhone);
+  await sendTextMessage(sock, targetJid, text, customerPhone, track);
   return text;
 }

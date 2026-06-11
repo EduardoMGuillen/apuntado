@@ -179,6 +179,17 @@ export async function releaseTakeover(
   });
 }
 
+export async function activateManualTakeover(
+  businessId: string,
+  customerPhone: string,
+  replyJid?: string
+): Promise<void> {
+  await apiFetch("/takeover/activate", {
+    method: "POST",
+    body: JSON.stringify({ businessId, customerPhone, replyJid }),
+  });
+}
+
 export async function getAppointmentsForReminder(): Promise<
   {
     businessId: string;

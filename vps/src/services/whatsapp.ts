@@ -22,7 +22,13 @@ import {
 } from "../lib/message-store.js";
 import { cleanEncryptionSessionFiles } from "../lib/signal-session-clean.js";
 import { enqueueIncomingMessage } from "./message-buffer.js";
-import { saveOutgoingMessage, setSessionConnected } from "./db.js";
+import {
+  activateManualTakeover,
+  saveOutgoingMessage,
+  setSessionConnected,
+} from "./db.js";
+import { getAppOutbound } from "../lib/outbound-tracker.js";
+import type { AppOutboundSource } from "../lib/outbound-tracker.js";
 import path from "path";
 import fs from "fs";
 import pino from "pino";
@@ -319,7 +325,8 @@ export async function startSession(
                 sock,
                 outboundJid,
                 fallbackText,
-                identity.customerPhone
+                identity.customerPhone,
+                { businessId, source: "bot" }
               );
               await saveOutgoingMessage(
                 businessId,
@@ -366,6 +373,62 @@ export async function startSession(
         );
       }
     }
+
+    for (const msg of messages) {
+      if (!msg.key.fromMe || !msg.message) continue;
+
+      const identity = extractCustomerIdentityFromMessage(msg);
+      if (!identity) continue;
+
+      const appSource = getAppOutbound(businessId, msg.key.id);
+      if (appSource === "bot" || appSource === "system") continue;
+
+      const body = getIncomingMessageText(msg).trim();
+      if (!body) continue;
+
+      const createdAt = new Date().toISOString();
+
+      try {
+        if (appSource !== "agent") {
+          await saveOutgoingMessage(
+            businessId,
+            identity.customerPhone,
+            body,
+            identity.replyJid
+          );
+        }
+
+        await activateManualTakeover(
+          businessId,
+          identity.customerPhone,
+          identity.replyJid
+        );
+
+        io.to(`business:${businessId}`).emit("message:new", {
+          businessId,
+          customerPhone: identity.customerPhone,
+          body,
+          fromClient: false,
+          createdAt,
+        });
+
+        io.to(`business:${businessId}`).emit("takeover:active", {
+          businessId,
+          customerPhone: identity.customerPhone,
+          body,
+          createdAt,
+        });
+
+        console.log(
+          `[WhatsApp] Mensaje humano (${appSource ?? "phone"}) → control manual: ${identity.customerPhone}`
+        );
+      } catch (err) {
+        console.error(
+          `[WhatsApp] Error registrando saliente humano (${identity.customerPhone}):`,
+          err
+        );
+      }
+    }
   });
 }
 
@@ -386,15 +449,20 @@ export async function sendMessage(
   businessId: string,
   customerPhone: string,
   body: string,
-  replyJid?: string
+  replyJid?: string,
+  options?: { source?: AppOutboundSource }
 ): Promise<void> {
   const session = sessions.get(businessId);
   if (!session?.connected) {
     throw new Error("Sesión de WhatsApp no conectada");
   }
 
+  const source = options?.source ?? "agent";
   const jid = resolveReplyJid(customerPhone, replyJid);
-  await sendTextMessage(session.sock, jid, body, customerPhone);
+  await sendTextMessage(session.sock, jid, body, customerPhone, {
+    businessId,
+    source,
+  });
   await saveOutgoingMessage(businessId, customerPhone, body, jid);
 }
 
