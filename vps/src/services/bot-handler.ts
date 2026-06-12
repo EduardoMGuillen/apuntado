@@ -23,18 +23,8 @@ import {
   getAnthropicErrorReply,
   getAnthropicEmptyReply,
   getEscalationReply,
-  getSubscriptionInactiveReply,
   type ConversationTone,
 } from "../lib/tone-messages.js";
-
-const CONVERSATION_LIMIT_MESSAGE =
-  "Hola. Este mes se alcanzó el límite de conversaciones de su plan. El negocio le atenderá en cuanto pueda. Para más volumen, consulte al negocio sobre el plan Pro de Apuntado. 🙏";
-
-const AI_CALL_LIMIT_MESSAGE =
-  "Hola. Este mes se alcanzó el límite de respuestas automáticas con IA de su plan. El negocio le atenderá pronto. Para alto volumen de WhatsApp, el plan Pro incluye respuestas con IA ilimitadas — consulte al negocio. 🙏";
-
-const TRIAL_LIMIT_MESSAGE =
-  "Hola. La prueba gratuita alcanzó su límite mensual de uso. Active un plan en Apuntado para seguir con el asistente automático, o el negocio le responderá manualmente. 🙏";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 
@@ -292,33 +282,24 @@ export async function processBotReply(
 
   if (!context.subscriptionActive) {
     console.warn(
-      `[Bot] Suscripción inactiva (${context.name} / ${businessId}) — plan no permite bot`
+      `[Bot] Suscripción inactiva (${context.name} / ${businessId}) — sin respuesta automática`
     );
-    await sendBotText(sockParams, getSubscriptionInactiveReply(tone), undefined, tone);
     return;
   }
 
   if (context.botBlocked || context.conversationLimitReached) {
     const usage = context.conversationUsage;
     console.warn(
-      `[Bot] Límite conversaciones (${businessId}) — ${usage?.used ?? "?"}/${usage?.limit ?? "?"} tier=${context.usageTier ?? "?"}`
+      `[Bot] Límite conversaciones (${businessId}) — ${usage?.used ?? "?"}/${usage?.limit ?? "?"} tier=${context.usageTier ?? "?"} — sin respuesta automática`
     );
-    const msg =
-      context.usageTier === "trial"
-        ? TRIAL_LIMIT_MESSAGE
-        : CONVERSATION_LIMIT_MESSAGE;
-    await sendBotText(sockParams, msg, undefined, tone);
     return;
   }
 
   if (context.aiCallLimitReached) {
     const ai = context.aiCallUsage;
     console.warn(
-      `[Bot] Límite respuestas IA (${businessId}) — ${ai?.used ?? "?"}/${ai?.limit ?? "?"} tier=${context.usageTier ?? "?"}`
+      `[Bot] Límite respuestas IA (${businessId}) — ${ai?.used ?? "?"}/${ai?.limit ?? "?"} tier=${context.usageTier ?? "?"} — sin respuesta automática`
     );
-    const msg =
-      context.usageTier === "trial" ? TRIAL_LIMIT_MESSAGE : AI_CALL_LIMIT_MESSAGE;
-    await sendBotText(sockParams, msg, undefined, tone);
     return;
   }
 
