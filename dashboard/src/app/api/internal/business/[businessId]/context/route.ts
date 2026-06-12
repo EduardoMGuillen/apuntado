@@ -31,6 +31,15 @@ export async function GET(
     return NextResponse.json({ error: "Parámetros requeridos" }, { status: 400 });
   }
 
+  try {
+    return await buildContextResponse(businessId, phone);
+  } catch (err) {
+    console.error(`[Context] Error (${businessId}):`, err);
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+  }
+}
+
+async function buildContextResponse(businessId: string, phone: string) {
   const business = await prisma.business.findUnique({
     where: { id: businessId },
     include: {
@@ -51,9 +60,16 @@ export async function GET(
     await resolveCustomerForContext(businessId, phone, timezone);
   const gcalConn = await getCalendarConnection(businessId);
   const { start: rangeStart, end: rangeEnd } = getBusinessDayRangeUtc(timezone, 3);
-  const busySlots = gcalConn
-    ? await getMergedAvailabilityBusy(businessId, timezone, 3)
-    : (
+  let busySlots: { scheduledAt: Date; endsAt: Date }[];
+  if (gcalConn) {
+    try {
+      busySlots = await getMergedAvailabilityBusy(businessId, timezone, 3);
+    } catch (err) {
+      console.error(
+        `[Context] Google Calendar no disponible (${businessId}):`,
+        err
+      );
+      busySlots = (
         await prisma.appointment.findMany({
           where: {
             businessId,
@@ -63,6 +79,19 @@ export async function GET(
           select: { scheduledAt: true, endsAt: true },
         })
       ).map((r) => ({ scheduledAt: r.scheduledAt, endsAt: r.endsAt }));
+    }
+  } else {
+    busySlots = (
+      await prisma.appointment.findMany({
+        where: {
+          businessId,
+          scheduledAt: { gte: rangeStart, lt: rangeEnd },
+          status: { in: ["pending", "confirmed"] },
+        },
+        select: { scheduledAt: true, endsAt: true },
+      })
+    ).map((r) => ({ scheduledAt: r.scheduledAt, endsAt: r.endsAt }));
+  }
 
   const availability = buildAvailabilityText(
     business.schedules,
