@@ -190,6 +190,17 @@ export async function activateManualTakeover(
   });
 }
 
+export async function releaseTakeoverIfIdle(
+  businessId: string,
+  customerPhone: string
+): Promise<boolean> {
+  const res = await apiFetch<{ released: boolean }>("/takeover/release-if-idle", {
+    method: "POST",
+    body: JSON.stringify({ businessId, customerPhone }),
+  });
+  return res.released;
+}
+
 export async function getAppointmentsForReminder(): Promise<
   {
     businessId: string;

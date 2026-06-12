@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { withVpsAuth } from "@/lib/internal-api";
+import { findIdleManualTakeovers } from "@/lib/manual-takeover-idle";
 
-/** Auto-liberación deshabilitada: el bot solo retoma con «Devolver al bot» en el panel. */
 export const GET = withVpsAuth(async () => {
-  return NextResponse.json([]);
+  const expired = await findIdleManualTakeovers();
+  return NextResponse.json(expired);
 });

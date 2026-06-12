@@ -9,6 +9,7 @@ import { messageRouter } from "./routes/messages.js";
 import { healthRouter } from "./routes/health.js";
 import { setupSocketHandlers } from "./socket/handlers.js";
 import { startReminderJob } from "./jobs/reminders.js";
+import { startTakeoverTimeoutJob } from "./jobs/takeover-timeout.js";
 import { getCorsOrigins } from "./lib/cors.js";
 import { restorePersistedSessions } from "./services/whatsapp.js";
 
@@ -34,7 +35,8 @@ app.use("/api/messages", authMiddleware, messageRouter);
 
 setupSocketHandlers(io);
 
-// Control manual solo se libera desde el panel («Devolver al bot»), sin timeout automático.
+// Control manual: se libera en panel o tras 4 días sin mensajes en el chat.
+startTakeoverTimeoutJob();
 startReminderJob();
 
 httpServer.listen(PORT, "0.0.0.0", () => {

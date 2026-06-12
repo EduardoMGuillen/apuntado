@@ -9,6 +9,7 @@ import {
   createAppointmentFromBot,
   escalateToAgent,
   recordAiCall,
+  releaseTakeoverIfIdle,
 } from "./db.js";
 import { parseReplyMenu, sendReplyWithMenu } from "../lib/message-menu.js";
 import { resolveReplyJid } from "../lib/reply-jid.js";
@@ -322,12 +323,19 @@ export async function processBotReply(
   }
 
   if (context.manualTakeover) {
-    console.log(`[Bot] Control manual activo para ${customerPhone}`);
-    io.to(`business:${businessId}`).emit("takeover:waiting", {
-      businessId,
-      customerPhone,
-    });
-    return;
+    const released = await releaseTakeoverIfIdle(businessId, customerPhone);
+    if (released) {
+      console.log(
+        `[Bot] Control manual liberado por inactividad (4d): ${customerPhone}`
+      );
+    } else {
+      console.log(`[Bot] Control manual activo para ${customerPhone}`);
+      io.to(`business:${businessId}`).emit("takeover:waiting", {
+        businessId,
+        customerPhone,
+      });
+      return;
+    }
   }
 
   let reply: string;
