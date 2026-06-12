@@ -34,8 +34,9 @@ function getAnthropicClient(): Anthropic | null {
   return new Anthropic({ apiKey: key });
 }
 
+/** Agradecimientos y confirmaciones cortas — no saludos (esos van a la IA con contexto). */
 const TRIVIAL_PATTERNS =
-  /^(ok|okay|vale|gracias|thanks|thank you|si|sí|no|bueno|listo|perfecto|hola|hello|hi|hey|buenas|buenos días|buenas tardes|buenas noches|👍|🙏|😊|✅|👌)[\s!.]*$/i;
+  /^(ok|okay|vale|gracias|thanks|thank you|si|sí|no|bueno|listo|perfecto|👍|🙏|😊|✅|👌)[\s!.]*$/i;
 
 const INVALID_REPLY_PATTERNS = [
   /waiting for message/i,
